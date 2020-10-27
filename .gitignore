@@ -5,3 +5,12 @@ __pycache__/
 *$py.class
 
 .idea/
+
+notebooks/
+preprocessors/
+scripts/datasets/
+scripts/utils
+scripts/evalution.py
+scripts/extractor.py
+build_features.py
+test.py

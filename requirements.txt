@@ -1,5 +1,4 @@
 streamlit
-numpy
-scikit-learn
+sklearn
 tensorflow
 pickle-mixin

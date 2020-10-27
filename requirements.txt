@@ -1,6 +1,5 @@
-streamlit~=0.69.2
-numpy~=1.18.5
-imutils~=0.5.3
-scikit-learn~=0.23.2
-tensorflow~=2.2.0
-opencv-python
+streamlit
+numpy
+scikit-learn
+tensorflow
+pickle-mixin

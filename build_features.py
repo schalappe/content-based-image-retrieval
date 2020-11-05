@@ -16,8 +16,9 @@ aap = AspectAwarePreprocessor(224, 224)
 
 # loop over types
 types = [
-    #'AKAZE', 'ORB', 'SURF',
-    #'VGG16', 'VGG19', 'MobileNet',
+    'AKAZE', 'ORB', 'SURF',
+    'VGG16', 'VGG19', 'MobileNet',
+    'MobileNet'
     'autoencoder'
 ]
 

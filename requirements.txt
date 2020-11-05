@@ -1,4 +1,0 @@
-streamlit
-sklearn
-tensorflow
-pickle-mixin

@@ -16,10 +16,12 @@ class Retrievor:
     def __load_compressor(self, compressor):
         with open(compressor, 'rb') as fp:
             features = pickle.load(fp)
-        names = [f[1] for f in features]
+        styles = [f[2] for f in features]
+        colors = [f[1] for f in features]
         matrix = [f[0] for f in features]
         self.matrix = np.array(matrix)
-        self.names = np.array(names)
+        self.colors = np.array(colors)
+        self.styles = np.array(styles)
 
     def compute_distance(self, vector, distance='cosinus'):
         v = vector.reshape(1, -1)
@@ -33,4 +35,8 @@ class Retrievor:
     def search(self, wanted, distance='cosinus', depth=1):
         distances = self.compute_distance(wanted, distance).flatten()
         nearest_ids = np.argsort(distances)[:depth].tolist()
-        return self.names[nearest_ids].tolist(), distances[nearest_ids].tolist()
+        return [
+            self.colors[nearest_ids].tolist(),
+            self.styles[nearest_ids].tolist(),
+            distances[nearest_ids].tolist()
+        ]

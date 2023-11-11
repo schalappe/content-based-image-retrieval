@@ -4,10 +4,10 @@ import pickle
 import argparse
 import progressbar
 import numpy as np
-from scripts import Extractor
-from scripts import Retrievor
-from preprocessors import AspectAwarePreprocessor
-from preprocessors import ImageToArrayPreprocessor
+from src.scripts import Extractor
+from src.scripts import Retrievor
+from src.preprocessors import AspectAwarePreprocessor
+from src.preprocessors import ImageToArrayPreprocessor
 
 
 # initialize process

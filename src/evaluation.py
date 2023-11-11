@@ -5,24 +5,24 @@ import csv
 import numpy as np
 import pandas as pd
 import progressbar
-from scripts import Timer
-from scripts import Retrievor
-from scripts import Extractor
-from scripts import mean_reciprocal_rank
-from scripts import mean_mean_average_precision
-from scripts import rank1_accuracy
-from preprocessors import AspectAwarePreprocessor
-from preprocessors import ImageToArrayPreprocessor
+from src.scripts import Timer
+from src.scripts import Retrievor
+from src.scripts import Extractor
+from src.scripts import mean_reciprocal_rank
+from src.scripts import mean_mean_average_precision
+from src.scripts import rank1_accuracy
+from src.preprocessors import AspectAwarePreprocessor
+from src.preprocessors import ImageToArrayPreprocessor
 
 # data
-data = pd.read_csv('./outputs/test.csv')
+data = pd.read_csv('../data/outputs/test.csv')
 # initialize process
 iap = ImageToArrayPreprocessor()
 aap = AspectAwarePreprocessor(224, 224)
 
 # evaluation.csv
 if not os.path.isfile('./outputs/evaluation.csv'):
-    with open('./outputs/evaluation.csv', 'w') as file:
+    with open('../data/outputs/evaluation.csv', 'w') as file:
         writer = csv.writer(file)
         writer.writerow([
             'extractor', 'distance', 'mrr', 'mmap', 'accuracy', 'average_time', 'errors', 'comparison_item'
@@ -113,7 +113,7 @@ for dType in types:
                 mrr = mean_reciprocal_rank(retrievals_both, both)
                 mmap = mean_mean_average_precision(retrievals_both, both)
                 rank_1 = rank1_accuracy(retrievals_both, both)
-            with open('./outputs/evaluation.csv', 'a+', newline='') as file:
+            with open('../data/outputs/evaluation.csv', 'a+', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow([
                     dType, distance, mrr, mmap, rank_1, average_time_search + average_time_extraction, errors, item

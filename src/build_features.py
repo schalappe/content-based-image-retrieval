@@ -4,12 +4,12 @@ import pickle
 import progressbar
 import numpy as np
 import pandas as pd
-from scripts import Extractor
-from preprocessors import AspectAwarePreprocessor
-from preprocessors import ImageToArrayPreprocessor
+from src.scripts import Extractor
+from src.preprocessors import AspectAwarePreprocessor
+from src.preprocessors import ImageToArrayPreprocessor
 
 # data
-data = pd.read_csv('./outputs/train.csv')
+data = pd.read_csv('../data/outputs/train.csv')
 # initialize process
 iap = ImageToArrayPreprocessor()
 aap = AspectAwarePreprocessor(224, 224)

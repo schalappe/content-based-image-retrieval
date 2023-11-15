@@ -41,4 +41,4 @@ if __name__ == "__main__":
     from dotenv import load_dotenv, find_dotenv
 
     load_dotenv(find_dotenv())
-    create_dataset(input_path=os.environ.get("INPUT_DATA"), output_path=os.environ.get("OUTPUT_DATA"))
+    create_dataset(input_path=os.environ.get("RAW_DATA"), output_path=os.environ.get("INPUT_DATA"))

@@ -52,3 +52,11 @@ def extract_features(input_path: str, output_path: str):
             database = DataFrame(database)
             database.write_parquet(join(output_path, f"{method}_db.parquet"))
             progress.advance(overall_task)
+
+
+if __name__ == "__main__":
+    import os
+    from dotenv import load_dotenv, find_dotenv
+
+    load_dotenv(find_dotenv())
+    extract_features(input_path=os.environ.get("INPUT_DATA"), output_path=os.environ.get("FEATURE_DATA"))

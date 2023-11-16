@@ -7,6 +7,7 @@ from itertools import product
 from os.path import join
 
 import polars as pl
+from rich.progress import BarColumn, Progress, TimeElapsedColumn, TimeRemainingColumn
 
 from src.addons.data import load_database
 from src.addons.extraction.extractor import extractors
@@ -32,20 +33,29 @@ def inference(input_path: str, feature_path: str, output_path: str):
     data = pl.read_parquet(join(input_path, "test.parquet"))
 
     # ##: Loop over finder and extractors.
-    for [(extract_method, extract_func), (finder_method, finder_func)] in product(extractors.items(), finders.items()):
-        finder: Finder = finder_func(extract_func(), load_database(join(feature_path, f"{extract_method}_db.parquet")))
+    with Progress("", BarColumn(), "", TimeElapsedColumn(), TimeRemainingColumn()) as progress:
+        combinations = product(extractors.items(), finders.items())
 
-        # ##: Make predictions.
-        prediction = []
-        for content in data.to_dicts():
-            res = deepcopy(content)
-            found = finder.search(wanted=res["path"], depth=5)
-            res.update(found)
-            prediction.append(res)
+        tasks = progress.add_task("[green]Réalisation des prédictions ...", total=len(combinations))
+        for [(extract_method, extract_func), (finder_method, finder_func)] in combinations:
+            task = progress.add_task(f"[red]Prédiction avec {extract_method} et {finder_method}", total=data.shape[0])
+            finder: Finder = finder_func(
+                extract_func(), load_database(join(feature_path, f"{extract_method}_db.parquet"))
+            )
 
-        # ##: Store.
-        prediction = pl.DataFrame(prediction)
-        prediction.write_parquet(join(output_path, f"{extract_method}_{finder_method}_evaluation.parquet"))
+            # ##: Make predictions.
+            prediction = []
+            for content in data.to_dicts():
+                res = deepcopy(content)
+                res.update(finder.search(wanted=res["path"], depth=5))
+
+                prediction.append(res)
+                progress.advance(task)
+
+            # ##: Store.
+            prediction = pl.DataFrame(prediction)
+            prediction.write_parquet(join(output_path, f"{extract_method}_{finder_method}_evaluation.parquet"))
+            progress.advance(tasks)
 
 
 if __name__ == "__main__":

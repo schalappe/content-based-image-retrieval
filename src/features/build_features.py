@@ -29,7 +29,7 @@ def extract_features(input_path: str, output_path: str):
     with Progress("", BarColumn(), "", TimeElapsedColumn(), TimeRemainingColumn()) as progress:
         overall_task = progress.add_task("[green]Création des base de données ...", total=len(extractors))
         for method, extractor_func in extractors.items():
-            extract_task = progress.add_task(f"Extraction avec la méthode {method}", total=data.shape[0])
+            extract_task = progress.add_task(f"[red]Extraction avec la méthode {method}", total=data.shape[0])
 
             # ##: Build database.
             database, extractor = [], extractor_func()

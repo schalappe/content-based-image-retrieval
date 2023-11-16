@@ -8,8 +8,7 @@ import polars as pl
 from polars import DataFrame
 from rich.progress import Progress, BarColumn, TimeElapsedColumn, TimeRemainingColumn
 
-from src.addons.extraction.compressor import VGGCompressor, NasNetCompressor, EfficientNetCompressor
-from src.addons.extraction.descriptor import AKAZEDescriptor, ORBDescriptor, SURFDescriptor
+from src.addons.extraction.extractor import extractors
 
 
 def extract_features(input_path: str, output_path: str):
@@ -25,23 +24,15 @@ def extract_features(input_path: str, output_path: str):
     """
     # ##: Prepare necessary.
     data = pl.read_parquet(join(input_path, "train.parquet"))
-    extractors = {
-        "AKAZE": AKAZEDescriptor(),
-        "ORB": ORBDescriptor(),
-        "SURF": SURFDescriptor(),
-        "VGG": VGGCompressor(),
-        "NasNet": NasNetCompressor(),
-        "EfficientNet": EfficientNetCompressor(),
-    }
 
     # ##: Build database.
     with Progress("", BarColumn(), "", TimeElapsedColumn(), TimeRemainingColumn()) as progress:
         overall_task = progress.add_task("[green]Création des base de données ...", total=len(extractors))
-        for method, extractor in extractors.items():
+        for method, extractor_func in extractors.items():
             extract_task = progress.add_task(f"Extraction avec la méthode {method}", total=data.shape[0])
 
             # ##: Build database.
-            database = []
+            database, extractor = [], extractor_func()
             for content in data.to_dicts():
                 feature = extractor.extract(image_path=content["path"])
                 color, style = content["label"].split("_")

@@ -17,7 +17,7 @@ def create_dataset(input_path: str, output_path: str):
     Parameters
     ----------
     input_path : str
-        Répertoire contenant les données brutes
+        Répertoire contenant les données brutes.
     output_path : str
         Répertoire où stocker les données.
     """

@@ -2,16 +2,26 @@
 """
 Classe générique pour l'extraction des données caractéristiques d'une image.
 """
-from abc import ABC, abstractmethod
-from typing import Any, Union
+from typing import Any, Protocol, Union
 
 from numpy import ndarray
 from tensorflow import Tensor
 
+from src.addons.extraction.compressor import (
+    EfficientNetCompressor,
+    NasNetCompressor,
+    VGGCompressor,
+)
+from src.addons.extraction.descriptor import (
+    AKAZEDescriptor,
+    ORBDescriptor,
+    SURFDescriptor,
+)
+
 Image = Union[ndarray, Tensor]
 
 
-class Extractor(ABC):
+class Extractor(Protocol):
     """
     Class générique pour l'extraction des données caractéristiques d'une image.
 
@@ -30,7 +40,6 @@ class Extractor(ABC):
 
     extractor: Any
 
-    @abstractmethod
     def preprocess(self, image_path: str) -> Image:
         """
         Chargement de l'image et ensemble de pré-traitement pour l'extraction des données caractéristiques.
@@ -46,7 +55,6 @@ class Extractor(ABC):
             L'image prête pour l'extraction des données caractéristiques.
         """
 
-    @abstractmethod
     def extract(self, image_path: str) -> ndarray:
         """
         Extraction des données caractéristiques d'une image.
@@ -61,3 +69,13 @@ class Extractor(ABC):
         ndarray
             Données caractéristiques de l'image.
         """
+
+
+extractors = {
+    "AKAZE": AKAZEDescriptor,
+    "ORB": ORBDescriptor,
+    "SURF": SURFDescriptor,
+    "VGG": VGGCompressor,
+    "NasNet": NasNetCompressor,
+    "EfficientNet": EfficientNetCompressor,
+}

@@ -2,15 +2,13 @@
 """
 Ensemble de classe pour l'utilisation des descripteurs du module `OpenCV`.
 """
-from typing import Optional
+from typing import Any, Optional
 
 import cv2 as cv
-from numpy import ndarray, concatenate, zeros, array
-
-from src.addons.extraction.extractor import Extractor
+from numpy import array, concatenate, ndarray, zeros
 
 
-class Descriptor(Extractor):
+class Descriptor:
     """
     Interface pour l'utilisation des descripteurs du module `OpenCV`.
 
@@ -28,6 +26,8 @@ class Descriptor(Extractor):
     extract(image_path: str)
         Utilisation d'un descripteur afin d'extraire les données caractéristiques d'une image.
     """
+
+    extractor: Any
 
     def __init__(self, size: int = 32):
         self.vector_size = size

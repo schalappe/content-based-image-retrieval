@@ -6,7 +6,7 @@ from os.path import join
 
 import polars as pl
 from polars import DataFrame
-from rich.progress import Progress, BarColumn, TimeElapsedColumn, TimeRemainingColumn
+from rich.progress import BarColumn, Progress, TimeElapsedColumn, TimeRemainingColumn
 
 from src.addons.extraction.extractor import extractors
 
@@ -47,7 +47,8 @@ def extract_features(input_path: str, output_path: str):
 
 if __name__ == "__main__":
     import os
-    from dotenv import load_dotenv, find_dotenv
+
+    from dotenv import find_dotenv, load_dotenv
 
     load_dotenv(find_dotenv())
-    extract_features(input_path=os.environ.get("INPUT_DATA"), output_path=os.environ.get("FEATURE_DATA"))
+    extract_features(input_path=os.environ.get("INPUT_PATH"), output_path=os.environ.get("FEATURE_PATH"))

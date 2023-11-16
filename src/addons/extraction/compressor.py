@@ -2,15 +2,13 @@
 """
 Ensemble de classe pour l'utilisation de réseaux de neurones pre-entraînés.
 """
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 import tensorflow as tf
 from numpy import ndarray
 
-from src.addons.extraction.extractor import Extractor
 
-
-class Compressor(Extractor):
+class Compressor:
     """
     Interface pour l'utilisation d'un réseau de neurones.
 
@@ -29,6 +27,7 @@ class Compressor(Extractor):
         Utilisation d'un réseau de neurones afin d'extraire les données caractéristiques d'une image.
     """
 
+    extractor: Any
     preprocessor: Optional[Callable]
 
     def __init__(self, height: int = 224, width: int = 224):

@@ -3,7 +3,7 @@
 Script pour la création des jeux de données.
 """
 from glob import glob
-from os.path import sep, join
+from os.path import join, sep
 
 from polars import DataFrame
 from rich.progress import track
@@ -38,7 +38,8 @@ def create_dataset(input_path: str, output_path: str):
 
 if __name__ == "__main__":
     import os
-    from dotenv import load_dotenv, find_dotenv
+
+    from dotenv import find_dotenv, load_dotenv
 
     load_dotenv(find_dotenv())
-    create_dataset(input_path=os.environ.get("RAW_DATA"), output_path=os.environ.get("INPUT_DATA"))
+    create_dataset(input_path=os.environ.get("RAW_PATH"), output_path=os.environ.get("INPUT_PATH"))

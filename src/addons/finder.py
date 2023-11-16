@@ -2,17 +2,48 @@
 """
 Classes pour la recherche d'images similaires.
 """
+import time
 from abc import ABC, abstractmethod
-from typing import Mapping, Dict, List, Optional
+from functools import wraps
+from typing import Callable, Dict, List, Mapping, Optional
 
 import numpy as np
 from numpy import ndarray
-from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.metrics.pairwise import euclidean_distances
-from sklearn.metrics.pairwise import manhattan_distances
+from sklearn.metrics.pairwise import (
+    cosine_similarity,
+    euclidean_distances,
+    manhattan_distances,
+)
 
 from src.addons.data import load_database
 from src.addons.extraction.extractor import Extractor
+
+
+def timeit(func: Callable):
+    """
+    Ajout de la durée d'exécution dans la réponse.
+    Ce décorateur fonctionne uniquement si la sortie de la fonction à enrichir `func` est un dictionnaire.
+
+    Parameters
+    ----------
+    func : Callable
+        Fonction à enrichir.
+
+    Returns
+    -------
+    Callable
+        Fonction enrichie.
+    """
+
+    @wraps(func)
+    def timeit_wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        result.update({"duration": end_time - start_time})
+        return result
+
+    return timeit_wrapper
 
 
 class Finder(ABC):
@@ -58,6 +89,7 @@ class Finder(ABC):
             Distance avec les éléments la base de données.
         """
 
+    @timeit
     def search(self, wanted: str, depth: int = 1) -> Dict[str, List[str]]:
         """
         Recherche des images similaires dans la base de données.

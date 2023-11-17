@@ -1,0 +1,4 @@
+isort>=0.12.0
+black>=23.11.0
+pylint>=3.0.2
+tensorflow-metal==1.0.0

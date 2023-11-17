@@ -22,16 +22,16 @@ def create_dataset(input_path: str, output_path: str):
         Répertoire où stocker les données.
     """
     # ##: Get necessary.
-    images_path = glob(input_path + "*/*.jpg")
+    images_path = list(glob(join(input_path, "*/*.jpg")))
     labels = list(map(lambda item: item.split(sep)[-2], images_path))
 
     # ##: Split and save.
-    train_set, train_label, test_set, test_label = train_test_split(
+    train_set, test_set, train_label, test_label = train_test_split(
         images_path, labels, test_size=0.33, random_state=1331, shuffle=True, stratify=labels
     )
     set_info = zip(("train", "test"), ([train_set, train_label], [test_set, test_label]))
 
-    for name, path, label in track(set_info, description="Save data ..."):
+    for name, (path, label) in track(set_info, description="Save data ..."):
         data = DataFrame({"label": label, "path": path})
         data.write_parquet(join(output_path, f"{name}.parquet"))
 

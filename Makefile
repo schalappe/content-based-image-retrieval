@@ -4,7 +4,7 @@ VIRTUAL_ENV=venv
 PYTHON=${VIRTUAL_ENV}/bin/python
 PIP=${VIRTUAL_ENV}/bin/pip
 
-.PHONY: build
+.PHONY: build features predict
 
 venv: requirements.txt
 	python3 -m venv venv
@@ -15,3 +15,6 @@ build:
 
 features:
 	$(PYTHON) src/features/build_features.py
+
+predict:
+	$(PYTHON) src/models/make_prediction.py

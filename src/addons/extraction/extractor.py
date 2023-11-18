@@ -15,7 +15,6 @@ from src.addons.extraction.compressor import (
 from src.addons.extraction.descriptor import (
     AKAZEDescriptor,
     ORBDescriptor,
-    SIFTDescriptor,
 )
 
 Image = Union[ndarray, Tensor]
@@ -74,7 +73,6 @@ class Extractor(Protocol):
 extractors = {
     "AKAZE": AKAZEDescriptor,
     "ORB": ORBDescriptor,
-    "SIFT": SIFTDescriptor,
     "VGG": VGGCompressor,
     "NasNet": NasNetCompressor,
     "EfficientNet": EfficientNetCompressor,

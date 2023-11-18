@@ -2,18 +2,17 @@
 """
 Classes pour la recherche d'images similaires.
 """
+import numpy as np
 import time
 from abc import ABC, abstractmethod
 from functools import wraps
-from typing import Callable, Dict, List, Mapping, Optional
-
-import numpy as np
 from numpy import ndarray
 from sklearn.metrics.pairwise import (
     cosine_similarity,
     euclidean_distances,
     manhattan_distances,
 )
+from typing import Callable, Dict, List, Mapping, Optional
 
 from src.addons.data import load_database
 from src.addons.extraction.extractor import Extractor
@@ -108,13 +107,20 @@ class Finder(ABC):
         """
         if self.database is None:
             raise RuntimeError("Aucune base de données n'a été fournie.")
-        # ##: Distance between wanted and database.
-        distances = self._compute_distance(self.extractor.extract(image_path=wanted)).flatten()
-        nearest_ids = np.argsort(distances)[:depth].tolist()
 
-        # ##: Generate output.
-        output = {key: data[nearest_ids].tolist() for key, data in self.database.items() if key != "features"}
-        output.update({"distance": distances[nearest_ids].tolist()})
+        # ##: Distance between wanted and database.
+        vector = self.extractor.extract(image_path=wanted)
+        if vector is not None:
+            distances = self._compute_distance(vector).flatten()
+            nearest_ids = np.argsort(distances)[:depth].tolist()
+
+            # ##: Generate output.
+            color = self.database["colors"][nearest_ids].tolist()
+            style = self.database["styles"][nearest_ids].tolist()
+            distance = distances[nearest_ids].tolist()
+        else:
+            distance, color, style = [], [], []
+        output = {"input": wanted, "colors": color, "styles": style, "distance": distance}
         return output
 
 

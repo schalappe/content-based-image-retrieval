@@ -7,7 +7,7 @@ from itertools import product
 from os.path import join
 
 import polars as pl
-from rich.progress import BarColumn, Progress, TimeElapsedColumn, TimeRemainingColumn
+from rich.progress import Progress
 
 from src.addons.data import load_database
 from src.addons.extraction.extractor import extractors
@@ -33,8 +33,8 @@ def inference(input_path: str, feature_path: str, output_path: str):
     data = pl.read_parquet(join(input_path, "test.parquet"))
 
     # ##: Loop over finder and extractors.
-    with Progress("", BarColumn(), "", TimeElapsedColumn(), TimeRemainingColumn()) as progress:
-        combinations = product(extractors.items(), finders.items())
+    with Progress() as progress:
+        combinations = list(product(extractors.items(), finders.items()))
 
         tasks = progress.add_task("[green]Réalisation des prédictions ...", total=len(combinations))
         for [(extract_method, extract_func), (finder_method, finder_func)] in combinations:

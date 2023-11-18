@@ -1,4 +1,4 @@
-export PYTHONPATH=/Users/schalappe/Documents/Lab/Engineer/Projects/content-based-image-retrieval
+export PYTHONPATH=$(shell pwd)
 
 VIRTUAL_ENV=venv
 PYTHON=${VIRTUAL_ENV}/bin/python

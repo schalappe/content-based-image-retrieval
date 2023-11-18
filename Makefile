@@ -3,6 +3,7 @@ export PYTHONPATH=$(shell pwd)
 VIRTUAL_ENV=venv
 PYTHON=${VIRTUAL_ENV}/bin/python
 PIP=${VIRTUAL_ENV}/bin/pip
+JUPYTER=${VIRTUAL_ENV}/bin/jupyter-lab
 
 .PHONY: prepare build features predict
 
@@ -28,3 +29,6 @@ features:
 
 predict:
 	$(PYTHON) src/models/make_prediction.py
+
+notebook:
+	cd notebooks/ & $(JUPYTER)

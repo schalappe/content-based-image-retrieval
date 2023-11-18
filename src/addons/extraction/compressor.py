@@ -56,7 +56,7 @@ class Compressor:
         image = tf.image.resize(image, [self.height, self.width])
         image = self.preprocessor(image) if self.preprocessor is not None else image
 
-        return tf.expand_dims(image, axis=1)
+        return tf.expand_dims(image, axis=0)
 
     def extract(self, image_path: str) -> ndarray:
         """
@@ -120,7 +120,7 @@ class NasNetCompressor(Compressor):
         Utilisation d'un réseau de neurones afin d'extraire les données caractéristiques d'une image.
     """
 
-    def __init__(self, height: int = 224, width: int = 224):
+    def __init__(self, height: int = 331, width: int = 331):
         super().__init__(height=height, width=width)
         self.preprocessor = tf.keras.applications.nasnet.preprocess_input
         model = tf.keras.applications.NASNetLarge(weights="imagenet", include_top=True, input_shape=(height, width, 3))
@@ -146,7 +146,7 @@ class EfficientNetCompressor(Compressor):
         Utilisation d'un réseau de neurones afin d'extraire les données caractéristiques d'une image.
     """
 
-    def __init__(self, height: int = 224, width: int = 224):
+    def __init__(self, height: int = 600, width: int = 600):
         super().__init__(height=height, width=width)
         self.preprocessor = tf.keras.applications.efficientnet.preprocess_input
         model = tf.keras.applications.EfficientNetB7(

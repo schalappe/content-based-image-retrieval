@@ -1,3 +1,5 @@
+export PYTHONPATH=/Users/schalappe/Documents/Lab/Engineer/Projects/content-based-image-retrieval
+
 VIRTUAL_ENV=venv
 PYTHON=${VIRTUAL_ENV}/bin/python
 PIP=${VIRTUAL_ENV}/bin/pip
@@ -10,3 +12,6 @@ venv: requirements.txt
 
 build:
 	$(PYTHON) src/data/build_dataset.py
+
+features:
+	$(PYTHON) src/features/build_features.py

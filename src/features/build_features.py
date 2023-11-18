@@ -6,7 +6,7 @@ from os.path import join
 
 import polars as pl
 from polars import DataFrame
-from rich.progress import BarColumn, Progress, TimeElapsedColumn, TimeRemainingColumn
+from rich.progress import Progress
 
 from src.addons.extraction.extractor import extractors
 
@@ -26,17 +26,18 @@ def extract_features(input_path: str, output_path: str):
     data = pl.read_parquet(join(input_path, "train.parquet"))
 
     # ##: Build database.
-    with Progress("", BarColumn(), "", TimeElapsedColumn(), TimeRemainingColumn()) as progress:
+    with Progress() as progress:
         overall_task = progress.add_task("[green]Création des base de données ...", total=len(extractors))
         for method, extractor_func in extractors.items():
-            extract_task = progress.add_task(f"[red]Extraction avec la méthode {method}", total=data.shape[0])
+            extract_task = progress.add_task(f"Extraction avec la méthode {method}", total=data.shape[0])
 
             # ##: Build database.
             database, extractor = [], extractor_func()
             for content in data.to_dicts():
                 feature = extractor.extract(image_path=content["path"])
-                color, style = content["label"].split("_")
-                database.append({"feature": feature, "color": color, "style": style})
+                if feature is not None:
+                    color, style = content["label"].split("_")
+                    database.append({"feature": list(feature), "color": color, "style": style})
                 progress.advance(extract_task)
 
             # ##: Save database.

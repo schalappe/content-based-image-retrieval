@@ -128,7 +128,7 @@ class ORBDescriptor(Descriptor):
         self.extractor = cv.ORB_create()
 
 
-class SURFDescriptor(Descriptor):
+class SIFTDescriptor(Descriptor):
     """
     Interface pour l'utilisation du descripteur **SURF** du module `OpenCV`.
 
@@ -149,4 +149,4 @@ class SURFDescriptor(Descriptor):
 
     def __init__(self, size: int = 32):
         super().__init__(size=size)
-        self.extractor = cv.xfeatures2d.SURF_create(400)
+        self.extractor = cv.SIFT_create()

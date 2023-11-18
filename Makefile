@@ -10,6 +10,16 @@ venv: requirements.txt
 	python3 -m venv venv
 	$(PIP) install -r requirements.txt
 
+prepare:
+	mkdir -p data/inputs
+	mkdir -p data/features
+	mkdir -p data/evaluation
+	@echo RAW_PATH= >> .envvv
+	@echo INPUT_PATH=$(shell pwd)/data/inputs >> .envvv
+	@echo FEATURE_PATH=$(shell pwd)/data/features >> .envvv
+	@echo EVALUATION_PATH=$(shell pwd)/data/evaluation >> .envvv
+
+
 build:
 	$(PYTHON) src/data/build_dataset.py
 

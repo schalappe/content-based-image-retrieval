@@ -4,10 +4,10 @@ VIRTUAL_ENV=venv
 PYTHON=${VIRTUAL_ENV}/bin/python
 PIP=${VIRTUAL_ENV}/bin/pip
 
-.PHONY: build features predict
+.PHONY: prepare build features predict
 
 venv: requirements.txt
-	python3 -m venv venv
+	python3 -m venv $(VIRTUAL_ENV)
 	$(PIP) install -r requirements.txt
 
 prepare:

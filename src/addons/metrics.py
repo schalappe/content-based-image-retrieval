@@ -2,39 +2,131 @@
 """
 Ensemble des métriques pour l'évaluation.
 """
-import numpy as np
+from statistics import mean
+from typing import Sequence
 
 
-def mean_reciprocal_rank(retrievals, labels):
-    rr = []
-    for retrieval, label in zip(retrievals, labels):
-        rank = 0
-        if label in retrieval:
-            rank = retrieval.index(label) + 1
-        rr.append(rank / len(retrieval))
-    return np.mean(rr)
+def reciprocal_rank(found: Sequence[str], ground_truth: str) -> float:
+    """
+    Calcul du rang de réciprocité.
+
+    Parameters
+    ----------
+    found : Sequence[str]
+        Liste des éléments trouvés.
+    ground_truth : str
+        Vrai label.
+
+    Returns
+    -------
+    float
+        Rang de réciprocité.
+    """
+    rank = found.index(ground_truth) + 1
+    return 1 / rank
 
 
-def rank1_accuracy(retrievals, labels):
-    first = []
-    for retrieval, label in zip(retrievals, labels):
-        if retrieval[0] == label:
-            first.append(1)
-        else:
-            first.append(0)
-    return np.mean(first)
+def mean_reciprocal_rank(retrievals: Sequence[Sequence[str]], labels: Sequence[str]) -> float:
+    """
+    Calcul de la moyenne des rangs de réciprocité.
+
+    Parameters
+    ----------
+    retrievals : Sequence[Sequence[str]]
+        Liste des éléments trouvés.
+    labels : Sequence[str]
+        Listes des vrais labels.
+
+    Returns
+    -------
+    float
+        Moyenne des rangs de réciprocité.
+    """
+    reciprocal_rangs = list(
+        map(lambda groups: reciprocal_rank(found=groups[0], ground_truth=groups[1]), zip(retrievals, labels))
+    )
+    return mean(reciprocal_rangs)
 
 
-def mean_mean_average_precision(retrievals, labels):
-    precisions = []
-    for retrieval, label in zip(retrievals, labels):
-        precision, hit = [], 0
-        for i, name in enumerate(retrieval):
-            if name == label:
-                hit += 1
-                precision.append(hit / (i + 1))
-        if hit == 0:
-            precisions.append(0.0)
-        else:
-            precisions.append(np.mean(precision))
-    return np.mean(precisions)
+def first_rank_accuracy(retrievals: Sequence[Sequence[str]], labels: Sequence[str]) -> float:
+    """
+    Calcul du pourcentage des labels corrects trouvés en premières positions.
+
+    Parameters
+    ----------
+    retrievals : Sequence[Sequence[str]]
+        Liste des éléments trouvés.
+    labels : Sequence[str]
+        Listes des vrais labels.
+
+    Returns
+    -------
+    float
+        Pourcentage des labels corrects trouvés en premières positions.
+    """
+    first_rank = list(map(lambda couple: couple[0][0] == couple[1], zip(retrievals, labels)))
+    return mean(first_rank)
+
+
+def precision(found: Sequence[str], ground_truth: str) -> float:
+    """
+    Calcul de la précision des labels trouvés.
+
+    Parameters
+    ----------
+    found : Sequence[str]
+        Liste des éléments trouvés.
+    ground_truth : str
+        Vrai label.
+
+    Returns
+    -------
+    float
+        Précision.
+    """
+    evaluation = list(map(lambda item: item == ground_truth, found))
+    return mean(evaluation)
+
+
+def average_precision(found: Sequence[str], ground_truth: str) -> float:
+    """
+    Calcul de la précision moyenne des labels trouvés.
+
+    Parameters
+    ----------
+    found : Sequence[str]
+        Liste des éléments trouvés.
+    ground_truth : str
+        Vrai label.
+
+    Returns
+    -------
+    float
+        Précision moyenne.
+    """
+    groups = list(map(lambda index: (found[index], found[: index + 1]), range(len(found))))
+    groups = list(filter(lambda group: group[0] == ground_truth, groups))
+    precisions = list(map(lambda group: precision(found=group[1], ground_truth=group[0]), groups))
+    return mean(precisions)
+
+
+def mean_average_precision(retrievals: Sequence[Sequence[str]], labels: Sequence[str]) -> float:
+    """
+    Calcul de la moyenne des précisions moyennes des labels trouvés.
+
+    Parameters
+    ----------
+    retrievals : Sequence[Sequence[str]]
+        Liste des éléments trouvés.
+    labels : Sequence[str]
+        Listes des vrais labels.
+
+    Returns
+    -------
+    float
+        Moyenne des précisions moyennes.
+    """
+    average_precisions = list(
+        map(lambda groups: average_precision(found=groups[0], ground_truth=groups[1]), list(zip(retrievals, labels)))
+    )
+    return mean(average_precisions)

@@ -31,4 +31,4 @@ predict:
 	$(PYTHON) src/models/make_prediction.py
 
 notebook:
-	cd notebooks/ & $(JUPYTER)
+	cd notebooks/ & $(JUPYTER) --port=8080

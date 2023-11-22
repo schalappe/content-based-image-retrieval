@@ -2,7 +2,7 @@
 """
 Ensemble des métriques pour l'évaluation.
 """
-from statistics import mean
+from statistics import fmean
 from typing import Sequence
 
 
@@ -22,8 +22,12 @@ def reciprocal_rank(found: Sequence[str], ground_truth: str) -> float:
     float
         Rang de réciprocité.
     """
-    rank = found.index(ground_truth) + 1
-    return 1 / rank
+    try:
+        rank = found.index(ground_truth) + 1
+        rank = 1 / rank
+    except ValueError:
+        rank = 0.
+    return rank
 
 
 def mean_reciprocal_rank(retrievals: Sequence[Sequence[str]], labels: Sequence[str]) -> float:
@@ -45,7 +49,7 @@ def mean_reciprocal_rank(retrievals: Sequence[Sequence[str]], labels: Sequence[s
     reciprocal_rangs = list(
         map(lambda groups: reciprocal_rank(found=groups[0], ground_truth=groups[1]), zip(retrievals, labels))
     )
-    return mean(reciprocal_rangs)
+    return fmean(reciprocal_rangs)
 
 
 def first_rank_accuracy(retrievals: Sequence[Sequence[str]], labels: Sequence[str]) -> float:
@@ -64,8 +68,8 @@ def first_rank_accuracy(retrievals: Sequence[Sequence[str]], labels: Sequence[st
     float
         Pourcentage des labels corrects trouvés en premières positions.
     """
-    first_rank = list(map(lambda couple: couple[0][0] == couple[1], zip(retrievals, labels)))
-    return mean(first_rank)
+    first_rank = list(map(lambda couple: couple[0][0] == couple[1] if couple[0] else False, zip(retrievals, labels)))
+    return fmean(first_rank)
 
 
 def precision(found: Sequence[str], ground_truth: str) -> float:
@@ -85,7 +89,7 @@ def precision(found: Sequence[str], ground_truth: str) -> float:
         Précision.
     """
     evaluation = list(map(lambda item: item == ground_truth, found))
-    return mean(evaluation)
+    return fmean(evaluation)
 
 
 def average_precision(found: Sequence[str], ground_truth: str) -> float:
@@ -107,7 +111,7 @@ def average_precision(found: Sequence[str], ground_truth: str) -> float:
     groups = list(map(lambda index: (found[index], found[: index + 1]), range(len(found))))
     groups = list(filter(lambda group: group[0] == ground_truth, groups))
     precisions = list(map(lambda group: precision(found=group[1], ground_truth=group[0]), groups))
-    return mean(precisions)
+    return fmean(precisions) if precisions else 0.
 
 
 def mean_average_precision(retrievals: Sequence[Sequence[str]], labels: Sequence[str]) -> float:
@@ -129,4 +133,4 @@ def mean_average_precision(retrievals: Sequence[Sequence[str]], labels: Sequence
     average_precisions = list(
         map(lambda groups: average_precision(found=groups[0], ground_truth=groups[1]), list(zip(retrievals, labels)))
     )
-    return mean(average_precisions)
+    return fmean(average_precisions)

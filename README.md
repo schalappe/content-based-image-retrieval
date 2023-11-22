@@ -4,7 +4,7 @@
 
 **Content-base** means that the search analyzes the contents of the image rather than the metadata such as keywords, tags, or descriptions associated with the image.
 
-![CBIR](./notebooks/cbir.png)
+![CBIR](reports/images/cbir.png)
 
 It is carried out in three steps:
 1. extraction of features from an image database to form a feature database,

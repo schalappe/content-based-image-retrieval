@@ -2,17 +2,18 @@
 """
 Classes pour la recherche d'images similaires.
 """
-import numpy as np
 import time
 from abc import ABC, abstractmethod
 from functools import wraps
+from typing import Callable, Dict, List, Mapping, Optional
+
+import numpy as np
 from numpy import ndarray
 from sklearn.metrics.pairwise import (
     cosine_similarity,
     euclidean_distances,
     manhattan_distances,
 )
-from typing import Callable, Dict, List, Mapping, Optional
 
 from src.addons.data import load_database
 from src.addons.extraction.extractor import Extractor
@@ -120,7 +121,10 @@ class Finder(ABC):
             distance = distances[nearest_ids].tolist()
         else:
             distance, color, style = [], [], []
-        output = {"input": wanted, "colors": color, "styles": style, "distance": distance}
+
+        predicts = list(map(lambda item: "_".join(item), zip(color, style)))
+
+        output = {"input": wanted, "colors": color, "styles": style, "returns": predicts, "distance": distance}
         return output
 
 

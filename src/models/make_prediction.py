@@ -2,7 +2,6 @@
 """
 Script pour la recherche d'image par similarité.
 """
-from copy import deepcopy
 from itertools import product
 from os.path import join
 
@@ -46,8 +45,9 @@ def inference(input_path: str, feature_path: str, output_path: str):
             # ##: Make predictions.
             prediction = []
             for content in data.to_dicts():
-                res = deepcopy(content)
-                res.update(finder.search(wanted=res["path"], depth=5))
+                color, style = content["label"].split("_")
+                res = {"ground_truth": content["label"], "gt_color": color, "gt_style": style}
+                res.update(finder.search(wanted=content["path"], depth=5))
 
                 prediction.append(res)
                 progress.advance(task)

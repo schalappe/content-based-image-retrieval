@@ -49,19 +49,6 @@ To evaluate my models, I used:
 
 the evaluation formulas is refer to [here][7]
 
-## Part 3: Results (MAP)
-|             | Cosinus | Manhattan | Euclidean |
-|-------------|:-------:|:---------:|----------:|
-|     ORB     |   0.04  |    0.19   |    0.18   |
-|     SURF    |   0.03  |    0.22   |    0.17   |
-|    AKAZE    |   0.04  |    0.20   |    0.20   |
-|    VGG16    |   0.00  |    0.71   |    0.71   |
-|    VGG19    |   0.00  |    0.71   |    0.71   |
-|  MobileNet  |   0.00  |    0.71   |  **0.72** |
-| Autoencoder |   0.03  |    0.52   |    0.52   |
-
-**Demo available**: https://sch-cbir-benchmark.herokuapp.com/
-
 [1]: https://en.wikipedia.org/wiki/Content-based_image_retrieval
 [2]: https://www.kaggle.com/trolukovich/apparel-images-dataset
 [3]: https://www.kaggle.com/dansbecker/5-celebrity-faces-dataset

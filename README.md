@@ -1,6 +1,6 @@
 # Content based image retrieval
 
-[Content-based image retrieval][1] (CBIR) is the application of computer vision techniques to the image retrieval problem, that is, the problem of searching for digital images in large databases.
+[Content-based image retrieval](https://en.wikipedia.org/wiki/Content-based_image_retrieval) (CBIR) is the application of computer vision techniques to the image retrieval problem, that is, the problem of searching for digital images in large databases.
 
 **Content-base** means that the search analyzes the contents of the image rather than the metadata such as keywords, tags, or descriptions associated with the image.
 
@@ -17,18 +17,16 @@ It is carried out in three steps:
 I would like to know which model and distance similarity is the most suitable for finding similar faces. For that, I try:
 
 ### Similarity measurement
-* Cosine similarity
-* Manhattan distance
-* Euclidean distance
+* [Similarité cosinus](https://fr.wikipedia.org/wiki/Similarit%C3%A9_cosinus)
+* [Distance de manhattan](https://fr.wikipedia.org/wiki/Distance_de_Manhattan)
+* [Distance euclidienne](https://fr.wikipedia.org/wiki/Espace_euclidien)
 
 ### features extraction
-* [AKAZE][4]
-* [ORB][5]
-* [SURF][8]
-* [VGG16][9]
-* [VGG19][10]
-* [MobileNet][11]
-* [Autoencoder][6]
+* [AKAZE](https://docs.opencv.org/3.4/db/d70/tutorial_akaze_matching.html)
+* [ORB](https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_orb/py_orb.html)
+* [VGG16](https://neurohive.io/en/popular-networks/vgg16/)
+* [NasNet](https://paperswithcode.com/model/nasnet?variant=nasnetalarge)
+* [EfficientNet](https://paperswithcode.com/method/efficientnet)
 
 **The objective is to find the right combination (extraction algorithm & similarity measure) that allows to have relevant answers.**
 
@@ -36,7 +34,7 @@ I would like to know which model and distance similarity is the most suitable fo
 
 In my exploration, I used the following datasets:
 
-* Fashion dataset [Apparel][2]
+* Fashion dataset [Apparel](https://www.kaggle.com/trolukovich/apparel-images-dataset)
 
 ## Part 2: Evaluation
 
@@ -47,16 +45,4 @@ To evaluate my models, I used:
 * Mean Reciprocal Rank (MRR) for the relevance of the first element
 * average time per query
 
-the evaluation formulas is refer to [here][7]
-
-[1]: https://en.wikipedia.org/wiki/Content-based_image_retrieval
-[2]: https://www.kaggle.com/trolukovich/apparel-images-dataset
-[3]: https://www.kaggle.com/dansbecker/5-celebrity-faces-dataset
-[4]: https://docs.opencv.org/4.2.0/db/d70/tutorial_akaze_matching.html
-[5]: https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_orb/py_orb.html
-[6]: https://en.wikipedia.org/wiki/Autoencoder
-[7]: https://web.stanford.edu/class/cs276/handouts/EvaluationNew-handout-1-per.pdf
-[8]: https://docs.opencv.org/master/df/dd2/tutorial_py_surf_intro.html
-[9]: https://neurohive.io/en/popular-networks/vgg16/
-[10]: https://iq.opengenus.org/vgg19-architecture/
-[11]: https://www.quantmetry.com/blog/mobilenet-optimisation-de-la-convolution-pour-les-reseaux-de-neurones-embarques/
+the evaluation formulas is referred to [here](https://web.stanford.edu/class/cs276/handouts/EvaluationNew-handout-1-per.pdf)

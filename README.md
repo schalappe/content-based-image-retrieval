@@ -2,10 +2,10 @@
 
 ## Table of contents
 
-1. [Description](#Description)
-2. [Replication](#Replication)
-3. [Result](#Result)
-4. [License](#License)
+1. [Description](#description)
+2. [Replication](#replication)
+3. [Result](#result)
+4. [License](#license)
 
 ## Description
 

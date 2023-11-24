@@ -15,10 +15,10 @@ prepare:
 	mkdir -p data/inputs
 	mkdir -p data/features
 	mkdir -p data/evaluation
-	@echo RAW_PATH= >> .envvv
-	@echo INPUT_PATH=$(shell pwd)/data/inputs >> .envvv
-	@echo FEATURE_PATH=$(shell pwd)/data/features >> .envvv
-	@echo EVALUATION_PATH=$(shell pwd)/data/evaluation >> .envvv
+	@echo RAW_PATH= >> .env
+	@echo INPUT_PATH=$(shell pwd)/data/inputs >> .env
+	@echo FEATURE_PATH=$(shell pwd)/data/features >> .env
+	@echo EVALUATION_PATH=$(shell pwd)/data/evaluation >> .env
 
 
 build:

@@ -1,48 +1,81 @@
-# Content based image retrieval
+# Content-based Image Retrieval
 
-[Content-based image retrieval](https://en.wikipedia.org/wiki/Content-based_image_retrieval) (CBIR) is the application of computer vision techniques to the image retrieval problem, that is, the problem of searching for digital images in large databases.
+## Table of contents
 
-**Content-base** means that the search analyzes the contents of the image rather than the metadata such as keywords, tags, or descriptions associated with the image.
+1. [Description](#Description)
+2. [Replication](#Replication)
+3. [Result](#Result)
+4. [License](#License)
+
+## Description
+
+[Content-based image retrieval](https://en.wikipedia.org/wiki/Content-based_image_retrieval) (CBIR) is the application of computer vision techniques to the image retrieval problem, which involves searching for digital images in large databases.
+
+**Content-based** means that the search analyzes the contents of the image rather than metadata such as keywords, tags, or descriptions associated with the image.
 
 ![CBIR](reports/images/cbir.png)
 
-It is carried out in three steps:
-1. extraction of features from an image database to form a feature database,
-2. extraction of the features of the input image,
-3. find the most similar features in the database,
-4. return the image associated with the found features
+The process consists of four steps:
+1. Extraction of features from an image database to form a feature database.
+2. Extraction of features from the input image.
+3. Finding the most similar features in the database.
+4. Returning the image associated with the found features.
 
-## Purpose
+### Purpose
 
-I would like to know which model and distance similarity is the most suitable for finding similar faces. For that, I try:
+The goal is to determine the most suitable model and distance similarity for finding similar images. To achieve this, we explore three different similarity measurements and five models for feature extraction.
 
-### Similarity measurement
-* [Similarité cosinus](https://fr.wikipedia.org/wiki/Similarit%C3%A9_cosinus)
-* [Distance de manhattan](https://fr.wikipedia.org/wiki/Distance_de_Manhattan)
-* [Distance euclidienne](https://fr.wikipedia.org/wiki/Espace_euclidien)
+#### Similarity Measurements
+* [Cosine Similarity](https://en.wikipedia.org/wiki/Cosine_similarity)
+* [Manhattan Distance](https://en.wikipedia.org/wiki/Manhattan_distance)
+* [Euclidean Distance](https://en.wikipedia.org/wiki/Euclidean_space)
 
-### features extraction
+#### Feature Extraction
 * [AKAZE](https://docs.opencv.org/3.4/db/d70/tutorial_akaze_matching.html)
 * [ORB](https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_orb/py_orb.html)
 * [VGG16](https://neurohive.io/en/popular-networks/vgg16/)
 * [NasNet](https://paperswithcode.com/model/nasnet?variant=nasnetalarge)
 * [EfficientNet](https://paperswithcode.com/method/efficientnet)
 
-**The objective is to find the right combination (extraction algorithm & similarity measure) that allows to have relevant answers.**
+**The objective is to find the right combination (extraction algorithm & similarity measure) that allows us to obtain relevant answers.**
 
-## Part 1: Dataset
+### Evaluation
 
-In my exploration, I used the following datasets:
+In our exploration, we used the Fashion dataset [Apparel](https://www.kaggle.com/trolukovich/apparel-images-dataset) available on Kaggle.
+To evaluate different combinations (model + measurement), we utilized three metrics:
 
-* Fashion dataset [Apparel](https://www.kaggle.com/trolukovich/apparel-images-dataset)
+* Mean Average Precision (MAP) for the system's robustness.
+* Mean Reciprocal Rank (MRR) for the relevance of the first element.
+* Average time per query.
 
-## Part 2: Evaluation
+The evaluation formulas are referred to in [this](https://web.stanford.edu/class/cs276/handouts/EvaluationNew-handout-1-per.pdf) Stanford course.
 
-CBIR system retrieves images based on feature similarity.
-To evaluate my models, I used:
+## Replication
 
-* Mean of Mean Average Precision (MMAP) for robustness of system
-* Mean Reciprocal Rank (MRR) for the relevance of the first element
-* average time per query
+All the experiments can be reproduced using the Makefile:
 
-the evaluation formulas is referred to [here](https://web.stanford.edu/class/cs276/handouts/EvaluationNew-handout-1-per.pdf)
+- Create the necessary virtual environment for all tests:
+
+```bash
+make venv
+```
+
+- Create a repository for features and the .env file with different paths:
+
+```bash
+make prepare
+```
+
+- Create the feature dataset:
+
+```bash
+make features
+```
+
+## Result
+
+Experimental results are presented in the report folder. Consult the PDF file and graphs to analyze the performance of different combinations.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).

@@ -7,9 +7,11 @@ JUPYTER=${VIRTUAL_ENV}/bin/jupyter-lab
 
 .PHONY: prepare build features predict
 
-venv: requirements.txt
+venv:
 	python3 -m venv $(VIRTUAL_ENV)
-	$(PIP) install -r requirements.txt
+	$(PIP) install poetry
+	poetry config virtualenvs.create false
+	poetry install --only main
 
 prepare:
 	mkdir -p data/inputs

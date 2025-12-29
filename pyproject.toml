@@ -19,6 +19,7 @@ dependencies = [
     "opencv-python>=4.11.0.86",
     "opencv-contrib-python>=4.11.0.86",
     "tensorflow>=2.18.0,<2.19.0",  # ##&: Pinned for tensorflow-metal 1.2.0 compatibility.
+    "kagglehub>=0.3.6",
 ]
 
 [project.optional-dependencies]

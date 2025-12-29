@@ -181,4 +181,4 @@ cython_debug/
 CLAUDE.md
 
 # Specific directories
-data/
+./data/

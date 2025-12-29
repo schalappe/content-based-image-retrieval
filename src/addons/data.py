@@ -2,9 +2,10 @@
 """
 Module pour le chargement des données.
 """
-import polars as pl
-from numpy import ndarray, asarray
 from typing import Mapping
+
+import polars as pl
+from numpy import asarray, ndarray
 
 
 def load_database(data_path: str) -> Mapping[str, ndarray]:

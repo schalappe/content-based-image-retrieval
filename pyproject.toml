@@ -9,16 +9,16 @@ license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "polars>=1.26.0,<2.0.0",
-    "matplotlib>=3.10.1,<4.0.0",
-    "seaborn>=0.13.2,<0.14.0",
-    "scikit-learn>=1.6.1,<2.0.0",
-    "jupyterlab>=4.3.6,<5.0.0",
-    "rich>=13.9.4,<14.0.0",
-    "python-dotenv>=1.0.1,<2.0.0",
-    "opencv-python>=4.11.0.86,<5.0.0.0",
-    "opencv-contrib-python>=4.11.0.86,<5.0.0.0",
-    "tensorflow>=2.18.0,<2.19.0",
+    "polars>=1.26.0",
+    "matplotlib>=3.10.1",
+    "seaborn>=0.13.2",
+    "scikit-learn>=1.6.1",
+    "jupyterlab>=4.3.6",
+    "rich>=13.9.4",
+    "python-dotenv>=1.0.1",
+    "opencv-python>=4.11.0.86",
+    "opencv-contrib-python>=4.11.0.86",
+    "tensorflow>=2.18.0,<2.19.0",  # ##&: Pinned for tensorflow-metal 1.2.0 compatibility.
 ]
 
 [project.optional-dependencies]

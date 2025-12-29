@@ -10,8 +10,7 @@ venv:
 	uv venv $(VIRTUAL_ENV) --python 3.12
 	uv pip install -e .
 
-venv-dev:
-	uv venv $(VIRTUAL_ENV) --python 3.12
+venv-dev: venv
 	uv pip install -e ".[dev]"
 
 prepare:

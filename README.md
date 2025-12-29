@@ -58,7 +58,7 @@ contains various clothing items organized by category.
 
 ## Project Structure
 
-```
+```bash
 ├── data/               # Data directory (created by make prepare)
 │   ├── inputs/         # Raw and processed input images
 │   ├── features/       # Extracted feature vectors
@@ -83,7 +83,7 @@ contains various clothing items organized by category.
 
 ### Prerequisites
 - Python 3.12+
-- [Poetry](https://python-poetry.org/docs/#installation) for dependency management
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) for dependency management
 - Kaggle account for dataset access
 
 ### Setup

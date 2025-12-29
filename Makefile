@@ -14,16 +14,14 @@ venv-dev: venv
 	uv pip install -e ".[dev]"
 
 prepare:
-	@mkdir -p data/raw
-	@mkdir -p data/inputs
-	@mkdir -p data/features
-	@mkdir -p data/evaluation
-	@echo "RAW_PATH=$(shell pwd)/data/raw" >> .env
-	@echo "INPUT_PATH=$(shell pwd)/data/inputs" >> .env
-	@echo "FEATURE_PATH=$(shell pwd)/data/features" >> .env
-	@echo "EVALUATION_PATH=$(shell pwd)/data/evaluation" >> .env
-	@echo "KAGGLE_USERNAME=" >> .env
-	@echo "KAGGLE_KEY=" >> .env
+	@mkdir -p data/raw data/inputs data/features data/evaluation
+	@printf '%s\n' \
+		"RAW_PATH=$(shell pwd)/data/raw" \
+		"INPUT_PATH=$(shell pwd)/data/inputs" \
+		"FEATURE_PATH=$(shell pwd)/data/features" \
+		"EVALUATION_PATH=$(shell pwd)/data/evaluation" \
+		"KAGGLE_USERNAME=" \
+		"KAGGLE_KEY=" > .env
 	@echo "Created .env file. Add your Kaggle credentials (https://www.kaggle.com/settings > API)"
 
 download:

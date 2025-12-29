@@ -178,7 +178,7 @@ cython_debug/
 .pypirc
 
 # Specific files
-.continuerules
+CLAUDE.md
 
 # Specific directories
 data/

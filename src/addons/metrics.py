@@ -26,7 +26,7 @@ def reciprocal_rank(found: Sequence[str], ground_truth: str) -> float:
         rank = found.index(ground_truth) + 1
         rank = 1 / rank
     except ValueError:
-        rank = 0.
+        rank = 0.0
     return rank
 
 
@@ -111,7 +111,7 @@ def average_precision(found: Sequence[str], ground_truth: str) -> float:
     groups = list(map(lambda index: (found[index], found[: index + 1]), range(len(found))))
     groups = list(filter(lambda group: group[0] == ground_truth, groups))
     precisions = list(map(lambda group: precision(found=group[1], ground_truth=group[0]), groups))
-    return fmean(precisions) if precisions else 0.
+    return fmean(precisions) if precisions else 0.0
 
 
 def mean_average_precision(retrievals: Sequence[Sequence[str]], labels: Sequence[str]) -> float:

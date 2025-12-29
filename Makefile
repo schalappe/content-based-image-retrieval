@@ -1,30 +1,34 @@
 export PYTHONPATH=$(shell pwd)
 
-VIRTUAL_ENV=venv
+VIRTUAL_ENV=.venv
 PYTHON=${VIRTUAL_ENV}/bin/python
-PIP=${VIRTUAL_ENV}/bin/pip
 JUPYTER=${VIRTUAL_ENV}/bin/jupyter-lab
 
-.PHONY: prepare build features predict
+.PHONY: prepare download build features predict venv venv-dev
 
 venv:
-	python3 -m venv $(VIRTUAL_ENV)
-	$(PIP) install poetry
-	poetry config virtualenvs.create false
-	poetry install --only main
+	uv venv $(VIRTUAL_ENV) --python 3.12
+	uv pip install -e .
+
+venv-dev: venv
+	uv pip install -e ".[dev]"
 
 prepare:
-	mkdir -p data/inputs
-	mkdir -p data/features
-	mkdir -p data/evaluation
-	@echo RAW_PATH= >> .env
-	@echo INPUT_PATH=$(shell pwd)/data/inputs >> .env
-	@echo FEATURE_PATH=$(shell pwd)/data/features >> .env
-	@echo EVALUATION_PATH=$(shell pwd)/data/evaluation >> .env
+	@mkdir -p data/raw data/inputs data/features data/evaluation
+	@printf '%s\n' \
+		"RAW_PATH=$(shell pwd)/data/raw" \
+		"INPUT_PATH=$(shell pwd)/data/inputs" \
+		"FEATURE_PATH=$(shell pwd)/data/features" \
+		"EVALUATION_PATH=$(shell pwd)/data/evaluation" \
+		"KAGGLE_USERNAME=" \
+		"KAGGLE_KEY=" > .env
+	@echo "Created .env file. Add your Kaggle credentials (https://www.kaggle.com/settings > API)"
 
+download:
+	$(PYTHON) src/dataset/download_dataset.py
 
 build:
-	$(PYTHON) src/data/build_dataset.py
+	$(PYTHON) src/dataset/build_dataset.py
 
 features:
 	$(PYTHON) src/features/build_features.py

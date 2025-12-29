@@ -58,7 +58,7 @@ contains various clothing items organized by category.
 
 ## Project Structure
 
-```
+```bash
 ├── data/               # Data directory (created by make prepare)
 │   ├── inputs/         # Raw and processed input images
 │   ├── features/       # Extracted feature vectors
@@ -83,8 +83,8 @@ contains various clothing items organized by category.
 
 ### Prerequisites
 - Python 3.12+
-- [Poetry](https://python-poetry.org/docs/#installation) for dependency management
-- Kaggle account for dataset access
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) for dependency management
+- [Kaggle account](https://www.kaggle.com/) with API credentials (get from [Kaggle Settings > API](https://www.kaggle.com/settings))
 
 ### Setup
 
@@ -104,9 +104,18 @@ contains various clothing items organized by category.
    make prepare
    ```
 
-4. Download the [Apparel Images Dataset](https://www.kaggle.com/trolukovich/apparel-images-dataset) from Kaggle and place it in the `data/inputs` directory.
+4. Add your Kaggle credentials to `.env` (get from [Kaggle Settings > API](https://www.kaggle.com/settings)):
+   ```text
+   KAGGLE_USERNAME=your_username
+   KAGGLE_KEY=your_api_key
+   ```
 
-5. Generate feature vectors:
+5. Download the [Apparel Images Dataset](https://www.kaggle.com/trolukovich/apparel-images-dataset) from Kaggle:
+   ```bash
+   make download
+   ```
+
+6. Generate feature vectors:
    ```bash
    make features
    ```

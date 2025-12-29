@@ -28,10 +28,10 @@ prepare:
 	@echo "Created .env file. Add your Kaggle credentials (https://www.kaggle.com/settings > API)"
 
 download:
-	$(PYTHON) src/data/download_dataset.py
+	$(PYTHON) src/dataset/download_dataset.py
 
 build:
-	$(PYTHON) src/data/build_dataset.py
+	$(PYTHON) src/dataset/build_dataset.py
 
 features:
 	$(PYTHON) src/features/build_features.py

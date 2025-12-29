@@ -64,8 +64,22 @@ def download_dataset(output_path: str) -> str:
 
 if __name__ == "__main__":
     import os
+    import sys
 
     from dotenv import find_dotenv, load_dotenv
 
     load_dotenv(find_dotenv())
-    download_dataset(output_path=os.environ.get("RAW_PATH"))
+
+    raw_path = os.environ.get("RAW_PATH", "").strip()
+    if not raw_path:
+        print(
+            "Error: RAW_PATH environment variable is not set or is empty.\n\n"
+            "Please do one of the following:\n"
+            "  1. Run 'make prepare' to create the .env file with required variables\n"
+            "  2. Manually set RAW_PATH in your .env file (e.g., RAW_PATH=data/raw)\n"
+            "  3. Export RAW_PATH in your shell: export RAW_PATH=data/raw",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    download_dataset(output_path=raw_path)

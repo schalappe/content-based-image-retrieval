@@ -48,8 +48,26 @@ def extract_features(input_path: str, output_path: str):
 
 if __name__ == "__main__":
     import os
+    import sys
 
     from dotenv import find_dotenv, load_dotenv
 
     load_dotenv(find_dotenv())
-    extract_features(input_path=os.environ.get("INPUT_PATH"), output_path=os.environ.get("FEATURE_PATH"))
+
+    required_vars = ["INPUT_PATH", "FEATURE_PATH"]
+    missing = [var for var in required_vars if not os.environ.get(var, "").strip()]
+    if missing:
+        print(
+            f"Error: Missing required environment variable(s): {', '.join(missing)}\n\n"
+            "Please do one of the following:\n"
+            "  1. Run 'make prepare' to create the .env file with required variables\n"
+            "  2. Manually set the variables in your .env file\n"
+            "  3. Export the variables in your shell",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    extract_features(
+        input_path=os.environ["INPUT_PATH"],
+        output_path=os.environ["FEATURE_PATH"],
+    )

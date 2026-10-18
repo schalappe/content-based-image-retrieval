@@ -1,17 +1,11 @@
 export PYTHONPATH=$(shell pwd)
 
-VIRTUAL_ENV=.venv
-PYTHON=${VIRTUAL_ENV}/bin/python
-JUPYTER=$(shell pwd)/${VIRTUAL_ENV}/bin/jupyter-lab
+RUN=uv run --frozen
 
-.PHONY: prepare download build features predict notebook venv venv-dev
+.PHONY: prepare download build features predict notebook venv lint test
 
 venv:
-	uv venv $(VIRTUAL_ENV) --python 3.12
-	uv pip install -e .
-
-venv-dev: venv
-	uv pip install -e ".[dev]"
+	uv sync --frozen --all-groups
 
 # Never overwrite an existing .env: it holds the Kaggle credentials.
 prepare:
@@ -30,16 +24,23 @@ prepare:
 	fi
 
 download:
-	$(PYTHON) src/dataset/download_dataset.py
+	$(RUN) src/dataset/download_dataset.py
 
 build:
-	$(PYTHON) src/dataset/build_dataset.py
+	$(RUN) src/dataset/build_dataset.py
 
 features:
-	$(PYTHON) src/features/build_features.py
+	$(RUN) src/features/build_features.py
 
 predict:
-	$(PYTHON) src/models/make_prediction.py
+	$(RUN) src/models/make_prediction.py
 
 notebook:
-	cd notebooks && $(JUPYTER) --port=8080
+	cd notebooks && $(RUN) jupyter-lab --port=8080
+
+lint:
+	$(RUN) ruff check .
+	$(RUN) ruff format --check .
+
+test:
+	$(RUN) python -m unittest discover tests

@@ -1,79 +1,36 @@
 # -*- coding: utf-8 -*-
 """
-Classe générique pour l'extraction des données caractéristiques d'une image.
+Contrat commun des extracteurs et registre des méthodes comparées.
 """
-from typing import Any, Protocol, Union
+
+from typing import Callable, Dict, List, Optional, Protocol, Sequence
 
 from numpy import ndarray
-from tensorflow import Tensor
 
-from src.addons.extraction.compressor import (
-    EfficientNetCompressor,
-    NasNetCompressor,
-    VGGCompressor,
-)
-from src.addons.extraction.descriptor import (
-    AKAZEDescriptor,
-    ORBDescriptor,
-)
-
-Image = Union[ndarray, Tensor]
+from src.addons.extraction.compressor import convnext, dinov2, efficientnet, nasnet, siglip2, vgg16
+from src.addons.extraction.descriptor import akaze, orb
 
 
 class Extractor(Protocol):
     """
-    Class générique pour l'extraction des données caractéristiques d'une image.
+    Extraction de vecteurs de taille fixe.
 
-    Attributes
-    ----------
-    extractor : Any
-        Object permettant l'extraction des données.
-
-    Methods
-    -------
-    preprocess(image_path: str)
-        Chargement de l'image et ensemble de pré-traitement pour l'extraction des données caractéristiques.
-    extract(image_path: str)
-        Extraction des données caractéristiques d'une image.
+    `fit` learns from the train split only (no-op for pretrained networks). `extract` returns one vector per image,
+    or `None` when the method finds nothing to describe (e.g. no keypoint).
     """
 
-    extractor: Any
+    def fit(self, image_paths: Sequence[str]): ...
 
-    def preprocess(self, image_path: str) -> Image:
-        """
-        Chargement de l'image et ensemble de pré-traitement pour l'extraction des données caractéristiques.
-
-        Parameters
-        ----------
-        image_path : str
-            Chemin de l'image.
-
-        Returns
-        -------
-        Image
-            L'image prête pour l'extraction des données caractéristiques.
-        """
-
-    def extract(self, image_path: str) -> ndarray:
-        """
-        Extraction des données caractéristiques d'une image.
-
-        Parameters
-        ----------
-        image_path : str
-            Chemin de l'image.
-
-        Returns
-        -------
-        ndarray
-            Données caractéristiques de l'image.
-        """
+    def extract(self, image_paths: Sequence[str]) -> List[Optional[ndarray]]: ...
 
 
-extractors = {
-    "AKAZE": AKAZEDescriptor,
-    "ORB": ORBDescriptor,
-    "VGG": VGGCompressor,
-    "NasNet": NasNetCompressor,
-    "EfficientNet": EfficientNetCompressor,
+extractors: Dict[str, Callable[[], Extractor]] = {
+    "AKAZE": akaze,
+    "ORB": orb,
+    "VGG": vgg16,
+    "NasNet": nasnet,
+    "EfficientNet": efficientnet,
+    "ConvNeXt": convnext,
+    "DINOv2": dinov2,
+    "SigLIP2": siglip2,
 }

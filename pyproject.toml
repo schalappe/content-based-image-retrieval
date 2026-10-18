@@ -7,28 +7,25 @@ authors = [
 ]
 license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.12"
+# ##: Tested on 3.14 only; widen after testing another version.
+requires-python = ">=3.14,<3.15"
 dependencies = [
-    "polars>=1.26.0",
-    "matplotlib>=3.10.1",
-    "seaborn>=0.13.2",
-    "scikit-learn>=1.6.1",
-    "jupyterlab>=4.3.6",
+    "polars>=2.0.0",
+    "scikit-learn>=1.9.1",
     "rich>=13.9.4",
     "python-dotenv>=1.0.1",
-    "opencv-python>=4.11.0.86",
-    "opencv-contrib-python>=4.11.0.86",
-    "tensorflow>=2.18.0,<2.19.0",  # ##&: Pinned for tensorflow-metal 1.2.0 compatibility.
+    "opencv-contrib-python>=5.0",  # ##: AKAZE lives in contrib (`cv.xfeatures2d`) since OpenCV 5.
+    "torch>=2.14.1",
+    "timm>=1.0.30",
     "kagglehub>=0.3.6",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "black>=25.1.0",
-    "isort>=6.0.1",
-    "pylint>=3.3.6",
-    "radon>=6.0.1",
-    "tensorflow-metal>=1.2.0",
+[dependency-groups]
+dev = ["ruff>=0.17.1"]
+notebook = [
+    "jupyterlab>=4.3.6",
+    "matplotlib>=3.10.1",
+    "seaborn>=0.13.2",
 ]
 
 [build-system]
@@ -38,24 +35,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
 
-[tool.black]
+[tool.ruff]
 line-length = 119
-target-version = ['py312']
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-    \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-)/
-'''
+target-version = "py314"
 
-[tool.isort]
-profile = "black"
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]

@@ -1,136 +1,126 @@
 # -*- coding: utf-8 -*-
 """
-Ensemble des métriques pour l'évaluation.
+Métriques d'évaluation d'une recherche tronquée à `k` résultats.
+
+`k` is the length of each result list, i.e. the depth used at search time; an empty list is a failed query and
+scores zero. Aggregates raise `ValueError` on mismatched lengths and `statistics.StatisticsError` on empty input.
 """
+
 from statistics import fmean
 from typing import Sequence
 
 
 def reciprocal_rank(found: Sequence[str], ground_truth: str) -> float:
     """
-    Calcul du rang de réciprocité.
+    Inverse du rang du premier élément pertinent (RR@k), zéro si aucun.
 
     Parameters
     ----------
     found : Sequence[str]
-        Liste des éléments trouvés.
+        Labels trouvés, du plus proche au plus lointain.
     ground_truth : str
         Vrai label.
 
     Returns
     -------
     float
-        Rang de réciprocité.
+        Rang réciproque.
     """
-    try:
-        rank = found.index(ground_truth) + 1
-        rank = 1 / rank
-    except ValueError:
-        rank = 0.0
-    return rank
+    for rank, item in enumerate(found, start=1):
+        if item == ground_truth:
+            return 1 / rank
+    return 0.0
 
 
-def mean_reciprocal_rank(retrievals: Sequence[Sequence[str]], labels: Sequence[str]) -> float:
+def average_precision(found: Sequence[str], ground_truth: str, relevant: int) -> float:
     """
-    Calcul de la moyenne des rangs de réciprocité.
+    Précision moyenne AP@k, normalisée par `min(relevant, k)`.
 
-    Parameters
-    ----------
-    retrievals : Sequence[Sequence[str]]
-        Liste des éléments trouvés.
-    labels : Sequence[str]
-        Listes des vrais labels.
-
-    Returns
-    -------
-    float
-        Moyenne des rangs de réciprocité.
-    """
-    reciprocal_rangs = list(
-        map(lambda groups: reciprocal_rank(found=groups[0], ground_truth=groups[1]), zip(retrievals, labels))
-    )
-    return fmean(reciprocal_rangs)
-
-
-def first_rank_accuracy(retrievals: Sequence[Sequence[str]], labels: Sequence[str]) -> float:
-    """
-    Calcul du pourcentage des labels corrects trouvés en premières positions.
-
-    Parameters
-    ----------
-    retrievals : Sequence[Sequence[str]]
-        Liste des éléments trouvés.
-    labels : Sequence[str]
-        Listes des vrais labels.
-
-    Returns
-    -------
-    float
-        Pourcentage des labels corrects trouvés en premières positions.
-    """
-    first_rank = list(map(lambda couple: couple[0][0] == couple[1] if couple[0] else False, zip(retrievals, labels)))
-    return fmean(first_rank)
-
-
-def precision(found: Sequence[str], ground_truth: str) -> float:
-    """
-    Calcul de la précision des labels trouvés.
+    Normalising by the number of relevant items the base could have returned (not by the hits) makes a list with
+    one hit score lower than a list with five.
 
     Parameters
     ----------
     found : Sequence[str]
-        Liste des éléments trouvés.
+        Labels trouvés, du plus proche au plus lointain.
     ground_truth : str
         Vrai label.
-
-    Returns
-    -------
-    float
-        Précision.
-    """
-    evaluation = list(map(lambda item: item == ground_truth, found))
-    return fmean(evaluation)
-
-
-def average_precision(found: Sequence[str], ground_truth: str) -> float:
-    """
-    Calcul de la précision moyenne des labels trouvés.
-
-    Parameters
-    ----------
-    found : Sequence[str]
-        Liste des éléments trouvés.
-    ground_truth : str
-        Vrai label.
+    relevant : int
+        Nombre d'éléments pertinents dans la base.
 
     Returns
     -------
     float
         Précision moyenne.
     """
-    groups = list(map(lambda index: (found[index], found[: index + 1]), range(len(found))))
-    groups = list(filter(lambda group: group[0] == ground_truth, groups))
-    precisions = list(map(lambda group: precision(found=group[1], ground_truth=group[0]), groups))
-    return fmean(precisions) if precisions else 0.0
+    hits, total = 0, 0.0
+    for rank, item in enumerate(found, start=1):
+        if item == ground_truth:
+            hits += 1
+            total += hits / rank
+    denominator = min(relevant, len(found))
+    return total / denominator if denominator else 0.0
 
 
-def mean_average_precision(retrievals: Sequence[Sequence[str]], labels: Sequence[str]) -> float:
+def mean_reciprocal_rank(retrievals: Sequence[Sequence[str]], labels: Sequence[str]) -> float:
     """
-    Calcul de la moyenne des précisions moyennes des labels trouvés.
+    Moyenne des rangs réciproques (MRR@k).
 
     Parameters
     ----------
     retrievals : Sequence[Sequence[str]]
-        Liste des éléments trouvés.
+        Labels trouvés pour chaque requête.
     labels : Sequence[str]
-        Listes des vrais labels.
+        Vrai label de chaque requête.
 
     Returns
     -------
     float
-        Moyenne des précisions moyennes.
+        MRR@k.
     """
-    average_precisions = list(
-        map(lambda groups: average_precision(found=groups[0], ground_truth=groups[1]), list(zip(retrievals, labels)))
+    return fmean(reciprocal_rank(found, label) for found, label in zip(retrievals, labels, strict=True))
+
+
+def first_rank_accuracy(retrievals: Sequence[Sequence[str]], labels: Sequence[str]) -> float:
+    """
+    Part des requêtes dont le premier résultat est pertinent.
+
+    Parameters
+    ----------
+    retrievals : Sequence[Sequence[str]]
+        Labels trouvés pour chaque requête.
+    labels : Sequence[str]
+        Vrai label de chaque requête.
+
+    Returns
+    -------
+    float
+        Précision au premier rang.
+    """
+    return fmean(bool(found) and found[0] == label for found, label in zip(retrievals, labels, strict=True))
+
+
+def mean_average_precision(
+    retrievals: Sequence[Sequence[str]], labels: Sequence[str], relevants: Sequence[int]
+) -> float:
+    """
+    Moyenne des précisions moyennes (MAP@k).
+
+    Parameters
+    ----------
+    retrievals : Sequence[Sequence[str]]
+        Labels trouvés pour chaque requête.
+    labels : Sequence[str]
+        Vrai label de chaque requête.
+    relevants : Sequence[int]
+        Nombre d'éléments pertinents dans la base pour chaque requête.
+
+    Returns
+    -------
+    float
+        MAP@k.
+    """
+    return fmean(
+        average_precision(found, label, relevant)
+        for found, label, relevant in zip(retrievals, labels, relevants, strict=True)
     )
-    return fmean(average_precisions)

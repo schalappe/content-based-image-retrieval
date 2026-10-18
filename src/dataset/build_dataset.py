@@ -2,8 +2,9 @@
 """
 Script pour la création des jeux de données.
 """
+
 from glob import glob
-from os.path import join, sep
+from os.path import basename, dirname, join
 
 from polars import DataFrame
 from rich.progress import track
@@ -12,27 +13,34 @@ from sklearn.model_selection import train_test_split
 
 def create_dataset(input_path: str, output_path: str):
     """
-    Création des jeux de données `train_set` et `test_set` avec un ratio de 70/30.
+    Création des jeux `train` (base d'images) et `test` (requêtes), stratifiés, ratio 67/33.
+
+    Paths are sorted before the seeded split: `glob` order depends on the file system, and the seed only fixes the
+    permutation of positions, not of images.
 
     Parameters
     ----------
     input_path : str
-        Répertoire contenant les données brutes.
+        Répertoire contenant les données brutes, un sous-répertoire `<couleur>_<style>` par catégorie.
     output_path : str
         Répertoire où stocker les données.
     """
-    # ##: Get necessary.
-    images_path = list(glob(join(input_path, "*/*.jpg")))
-    labels = list(map(lambda item: item.split(sep)[-2], images_path))
+    images_path = sorted(glob(join(input_path, "*", "*.jpg")))
+    labels = [basename(dirname(path)) for path in images_path]
 
-    # ##: Split and save.
     train_set, test_set, train_label, test_label = train_test_split(
-        images_path, labels, test_size=0.33, random_state=1331, shuffle=True, stratify=labels
+        images_path,
+        labels,
+        test_size=0.33,
+        random_state=1331,
+        shuffle=True,
+        stratify=labels,
     )
-    set_info = zip(("train", "test"), ([train_set, train_label], [test_set, test_label]))
+    set_info = zip(("train", "test"), ([train_set, train_label], [test_set, test_label]), strict=True)
 
     for name, (path, label) in track(set_info, description="Save data ..."):
-        data = DataFrame({"label": label, "path": path})
+        color, style = zip(*(item.split("_") for item in label), strict=True)
+        data = DataFrame({"path": path, "label": label, "color": color, "style": style})
         data.write_parquet(join(output_path, f"{name}.parquet"))
 
 

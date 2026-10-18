@@ -1,194 +1,51 @@
 # -*- coding: utf-8 -*-
 """
-Classes pour la recherche d'images similaires.
+Recherche exacte des images les plus proches.
 """
-import time
-from abc import ABC, abstractmethod
-from functools import wraps
-from typing import Callable, Dict, List, Mapping, Optional
+
+from time import perf_counter
 
 import numpy as np
 from numpy import ndarray
-from sklearn.metrics.pairwise import (
-    cosine_similarity,
-    euclidean_distances,
-    manhattan_distances,
-)
+from sklearn.metrics.pairwise import pairwise_distances
 
-from src.addons.data import load_database
-from src.addons.extraction.extractor import Extractor
+# ##: Names understood by `pairwise_distances`; all are distances, so smaller means closer.
+MEASURES = ("cosine", "euclidean", "manhattan")
 
 
-def timeit(func: Callable):
+def search(gallery: ndarray, queries: ndarray, measure: str, depth: int, chunk: int = 512):
     """
-    Ajout de la durée d'exécution dans la réponse.
-    Ce décorateur fonctionne uniquement si la sortie de la fonction à enrichir `func` est un dictionnaire.
+    Recherche exhaustive des `depth` plus proches voisins de chaque requête.
+
+    Brute force on purpose: results are exact, so differences between methods come from the features and the
+    measure, not from an approximate index.
 
     Parameters
     ----------
-    func : Callable
-        Fonction à enrichir.
+    gallery : ndarray
+        Vecteurs de la base, de forme (n_gallery, dim).
+    queries : ndarray
+        Vecteurs des requêtes, de forme (n_queries, dim).
+    measure : str
+        Une des mesures de `MEASURES`.
+    depth : int
+        Nombre de voisins à retourner.
+    chunk : int, default: 512
+        Nombre de requêtes traitées ensemble, pour borner la mémoire de la matrice des distances.
 
     Returns
     -------
-    Callable
-        Fonction enrichie.
+    tuple[ndarray, ndarray, ndarray]
+        Indices dans `gallery` (n_queries, depth), distances associées (n_queries, depth), et durée de recherche par
+        requête en secondes (n_queries,), amortie sur chaque bloc.
     """
-
-    @wraps(func)
-    def timeit_wrapper(*args, **kwargs):
-        start_time = time.perf_counter()
-        result = func(*args, **kwargs)
-        end_time = time.perf_counter()
-        result.update({"duration": end_time - start_time})
-        return result
-
-    return timeit_wrapper
-
-
-class Finder(ABC):
-    """
-    Classe générique pour la recherche d'image à partir de similarité entre données caractéristiques.
-
-    Methods
-    -------
-    change_database(data_path: str)
-        Changement de la base des données caractéristiques.
-    search(wanted: str, depth: int = 1)
-        Recherche des images similaires dans la base de données.
-    """
-
-    def __init__(self, extractor: Extractor, database: Optional[Mapping[str, ndarray]] = None):
-        self.extractor = extractor
-        self.database = database
-
-    def change_database(self, data_path: str):
-        """
-        Changement de la base des données caractéristiques.
-
-        Parameters
-        ----------
-        data_path : str
-            Chemin des données à charger.
-        """
-        self.database = load_database(data_path=data_path)
-
-    @abstractmethod
-    def _compute_distance(self, vector: ndarray) -> ndarray:
-        """
-        Calcul de la distance entre le vecteur caractéristique et les éléments de la base de données.
-
-        Parameters
-        ----------
-        vector : ndarray
-            Vecteur caractéristique
-
-        Returns
-        -------
-        ndarray
-            Distance avec les éléments la base de données.
-        """
-
-    @timeit
-    def search(self, wanted: str, depth: int = 1) -> Dict[str, List[str]]:
-        """
-        Recherche des images similaires dans la base de données.
-
-        Parameters
-        ----------
-        wanted : str
-            Image à rechercher.
-        depth : int, default: 1
-            Le nombre d'images à retourner.
-
-        Returns
-        -------
-        Dict[str, List[str]]
-            Dictionnaire des informations trouvées dans la base.
-        """
-        if self.database is None:
-            raise RuntimeError("Aucune base de données n'a été fournie.")
-
-        # ##: Distance between wanted and database.
-        vector = self.extractor.extract(image_path=wanted)
-        if vector is not None:
-            distances = self._compute_distance(vector).flatten()
-            nearest_ids = np.argsort(distances)[:depth].tolist()
-
-            # ##: Generate output.
-            color = self.database["colors"][nearest_ids].tolist()
-            style = self.database["styles"][nearest_ids].tolist()
-            distance = distances[nearest_ids].tolist()
-        else:
-            distance, color, style = [], [], []
-
-        predicts = list(map(lambda item: "_".join(item), zip(color, style)))
-
-        output = {"input": wanted, "colors": color, "styles": style, "returns": predicts, "distance": distance}
-        return output
-
-
-class CosinusFinder(Finder):
-    """
-    Recherche d'images similaire à partir de la distance de Cosinus.
-    """
-
-    def _compute_distance(self, vector: ndarray) -> ndarray:
-        """
-        Calcul de la distance entre le vecteur caractéristique et les éléments de la base de données.
-
-        Parameters
-        ----------
-        vector : ndarray
-            Vecteur caractéristique
-
-        Returns
-        -------
-        ndarray
-            Distance avec les éléments la base de données.
-        """
-        return cosine_similarity(self.database["features"], vector.reshape(1, -1))
-
-
-class ManhattanFinder(Finder):
-    """
-    Recherche d'images similaire à partir de la distance de Manhattan.
-    """
-
-    def _compute_distance(self, vector: ndarray) -> ndarray:
-        """
-        Calcul de la distance entre le vecteur caractéristique et les éléments de la base de données.
-
-        Parameters
-        ----------
-        vector : ndarray
-            Vecteur caractéristique
-
-        Returns
-        -------
-        ndarray
-            Distance avec les éléments la base de données.
-        """
-        return manhattan_distances(self.database["features"], vector.reshape(1, -1))
-
-
-class EuclideanFinder(Finder):
-    """
-    Recherche d'images similaire à partir de la distance Euclidienne.
-    """
-
-    def _compute_distance(self, vector: ndarray) -> ndarray:
-        """
-        Calcul de la distance entre le vecteur caractéristique et les éléments de la base de données.
-
-        Parameters
-        ----------
-        vector : ndarray
-            Vecteur caractéristique
-
-        Returns
-        -------
-        ndarray
-            Distance avec les éléments la base de données.
-        """
-        return euclidean_distances(self.database["features"], vector.reshape(1, -1))
+    indices, distances, seconds = [], [], []
+    for start in range(0, len(queries), chunk):
+        block = queries[start : start + chunk]
+        begin = perf_counter()
+        distance = pairwise_distances(block, gallery, metric=measure)
+        nearest = np.argsort(distance, axis=1, kind="stable")[:, :depth]
+        seconds.append(np.full(len(block), (perf_counter() - begin) / len(block)))
+        indices.append(nearest)
+        distances.append(np.take_along_axis(distance, nearest, axis=1))
+    return np.concatenate(indices), np.concatenate(distances), np.concatenate(seconds)

@@ -32,29 +32,46 @@ This project compares different combinations of feature extraction algorithms an
 the most effective approach for image retrieval tasks.
 
 #### Feature Extraction Methods
-* Traditional Computer Vision:
-  * [AKAZE](https://docs.opencv.org/3.4/db/d70/tutorial_akaze_matching.html) - Fast local feature detector and descriptor
-  * [ORB](https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_orb/py_orb.html) - Oriented FAST and Rotated BRIEF features
-* Deep Learning:
-  * [VGG16](https://neurohive.io/en/popular-networks/vgg16/) - 16-layer CNN architecture
-  * [NasNet](https://paperswithcode.com/model/nasnet?variant=nasnetalarge) - Neural Architecture Search Network
-  * [EfficientNet](https://paperswithcode.com/method/efficientnet) - Scalable and efficient CNN
+* Traditional Computer Vision, as a [bag of visual words](https://en.wikipedia.org/wiki/Bag-of-words_model_in_computer_vision)
+  (512-word vocabulary learned on the gallery split, Hamming assignment of the binary descriptors):
+  * [AKAZE](https://docs.opencv.org/4.x/db/d70/tutorial_akaze_matching.html) - Fast local feature detector and descriptor
+  * [ORB](https://docs.opencv.org/4.x/d1/d89/tutorial_py_orb.html) - Oriented FAST and Rotated BRIEF features
+* Deep Learning, pretrained networks loaded with [timm](https://github.com/huggingface/pytorch-image-models), each
+  with its prescribed preprocessing:
+  * [VGG16](https://neurohive.io/en/popular-networks/vgg16/) - 16-layer CNN, last dense layer before classification (4096)
+  * [NasNet](https://paperswithcode.com/model/nasnet?variant=nasnetalarge) - NASNetLarge, global average pooling (4032)
+  * [EfficientNet](https://paperswithcode.com/method/efficientnet) - EfficientNet-B7, global average pooling (2560)
+  * [ConvNeXt](https://arxiv.org/abs/2201.03545) - ConvNeXt-Tiny, a modern CNN of modest size (768)
+  * [DINOv2](https://github.com/facebookresearch/dinov2) - ViT-B/14, self-supervised (768)
+  * [SigLIP 2](https://arxiv.org/abs/2502.14786) - ViT-B/16, image-text pretraining, image encoder (768)
 
-#### Similarity Metrics
-* [Cosine Similarity](https://en.wikipedia.org/wiki/Cosine_similarity) - Measure of similarity between two non-zero vectors
+#### Similarity Measures
+
+Search is exact (brute force), so differences come from the features and the measure, not from an approximate index.
+
+* [Cosine Distance](https://en.wikipedia.org/wiki/Cosine_similarity) - 1 minus the cosine similarity; compares directions only
 * [Manhattan Distance](https://en.wikipedia.org/wiki/Manhattan_distance) - Sum of absolute differences between coordinates
 * [Euclidean Distance](https://en.wikipedia.org/wiki/Euclidean_space) - "Ordinary" straight-line distance between points
 
 ### Evaluation Dataset
 
-We used the [Apparel Images Dataset](https://www.kaggle.com/trolukovich/apparel-images-dataset) from Kaggle, which
-contains various clothing items organized by category.
+We used version 6 of the [Apparel Images Dataset](https://www.kaggle.com/trolukovich/apparel-images-dataset) from
+Kaggle: 11,385 images in 24 `<color>_<style>` categories. A seeded, stratified split keeps 67% of the images as the
+searchable gallery and 33% as queries.
 
 ### Evaluation Metrics
-* [Mean Average Precision (MAP)](https://en.wikipedia.org/wiki/Evaluation_measures_(information_retrieval)#Mean_average_precision) - Assesses overall system retrieval quality
-* [Mean Reciprocal Rank (MRR)](https://en.wikipedia.org/wiki/Mean_reciprocal_rank) - Evaluates the rank of the first relevant item
-* First Rank Accuracy - Percentage of queries where the first result is relevant
-* Average query time - Performance measurement in seconds
+
+Each query returns its 5 nearest gallery images. An image is relevant when it shares the query's label (color and
+style), or only its color, or only its style: the notebook reports all three.
+
+* [MAP@5](https://en.wikipedia.org/wiki/Evaluation_measures_(information_retrieval)#Mean_average_precision) - Average
+  precision over the 5 results, divided by `min(relevant images in the gallery, 5)`
+* [MRR@5](https://en.wikipedia.org/wiki/Mean_reciprocal_rank) - Reciprocal rank of the first relevant result, 0 beyond rank 5
+* First Rank Accuracy - Share of queries whose first result is relevant
+* Query time - Mean single-image extraction time plus mean search time per query, in milliseconds
+
+A query or gallery image from which a method extracts nothing (no keypoint) stays in the evaluation and counts
+against that method.
 
 ## Project Structure
 
@@ -70,7 +87,7 @@ contains various clothing items organized by category.
 │   ├── addons/         # Core functionality
 │   │   ├── extraction/ # Feature extraction algorithms
 │   │   └── metrics.py  # Evaluation metrics
-│   ├── data/           # Data processing utilities
+│   ├── dataset/        # Download and train/test split
 │   ├── features/       # Feature generation scripts
 │   └── models/         # Prediction and model utilities
 ├── tests/              # Unit tests
@@ -82,7 +99,7 @@ contains various clothing items organized by category.
 ## Installation
 
 ### Prerequisites
-- Python 3.12+
+- Python 3.14 (installed by uv if missing)
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) for dependency management
 - [Kaggle account](https://www.kaggle.com/) with API credentials (get from [Kaggle Settings > API](https://www.kaggle.com/settings))
 
@@ -115,7 +132,12 @@ contains various clothing items organized by category.
    make download
    ```
 
-6. Generate feature vectors:
+6. Split it into gallery (`train`) and queries (`test`):
+   ```bash
+   make build
+   ```
+
+7. Extract the feature vectors of every image, for every method:
    ```bash
    make features
    ```
@@ -124,7 +146,7 @@ contains various clothing items organized by category.
 
 ### Running Evaluations
 
-To run the complete evaluation pipeline:
+To search the 5 nearest images of every query, for every method and measure (needs `make features`):
 ```bash
 make predict
 ```
@@ -139,30 +161,45 @@ make notebook
 ### Running Tests
 
 ```bash
-python -m unittest discover tests
+make test
+```
+
+### Linting and Formatting
+
+```bash
+make lint
 ```
 
 ## Results and Findings
 
-Our evaluation revealed significant differences in performance between traditional computer vision and deep learning approaches:
+Results for relevance on the full label (color and style), best measure per method, from the
+[evaluation notebook](notebooks/1.0-evaluation.ipynb). Color-only and style-only tables are in the notebook.
+Measured on an Apple M1 Pro (PyTorch, MPS); query time depends on the hardware.
 
 ### Performance Comparison
 
-| Method       | Similarity | MAP  | MRR  | First Rank Accuracy | Avg Query Time (s)  |
-|--------------|------------|------|------|---------------------|---------------------|
-| EfficientNet | Euclidean  | 0.75 | 0.78 | 0.70                | 0.008               |
-| VGG16        | Manhattan  | 0.72 | 0.76 | 0.68                | 0.009               |
-| NasNet       | Euclidean  | 0.65 | 0.70 | 0.64                | 0.012               |
-| AKAZE        | Manhattan  | 0.41 | 0.47 | 0.39                | 0.005               |
-| ORB          | Euclidean  | 0.35 | 0.40 | 0.33                | 0.004               |
+| Method       | Measure   | MAP@5 | MRR@5 | First Rank Accuracy | Query Time (ms) |
+|--------------|-----------|-------|-------|---------------------|-----------------|
+| SigLIP 2     | Cosine    | 0.671 | 0.870 | 0.803               | 25              |
+| ConvNeXt     | Cosine    | 0.618 | 0.826 | 0.751               | 16              |
+| VGG16        | Cosine    | 0.607 | 0.816 | 0.738               | 53              |
+| EfficientNet | Cosine    | 0.549 | 0.778 | 0.690               | 207             |
+| NasNet       | Manhattan | 0.512 | 0.741 | 0.649               | 149             |
+| DINOv2       | Manhattan | 0.448 | 0.727 | 0.613               | 133             |
+| AKAZE        | Manhattan | 0.174 | 0.385 | 0.282               | 24              |
+| ORB          | Manhattan | 0.149 | 0.364 | 0.259               | 7               |
 
 ### Key Findings
 
-- **Neural networks significantly outperform traditional descriptors** in retrieval accuracy
-- **Euclidean and Manhattan distances** consistently work better than cosine similarity
-- **EfficientNet with Euclidean distance** provides the best balance of accuracy and performance
-- Traditional methods (AKAZE, ORB) are faster but substantially less accurate
-- Cosine similarity performs poorly across all extraction methods
+- **Neural networks clearly outperform local descriptors**: MAP@5 of 0.45–0.67 versus 0.11–0.17 for AKAZE and ORB.
+- **SigLIP 2 (image-text pretraining) is the most accurate** on the full label (0.671) and on color alone (0.689),
+  at ~25 ms per query; **ConvNeXt-Tiny is second and the fastest network** (~16 ms).
+- **The large networks of the original study** (EfficientNet-B7, NASNetLarge) are less accurate and 5–13× slower.
+- **DINOv2 is best on style alone (0.971) but weakest on color (0.458)**: its features describe shape, not color.
+- **The measure matters little for networks**: cosine is best or within 0.005 of the best for each, except that
+  Manhattan drops with SigLIP 2 (0.633). For AKAZE and ORB, Manhattan and cosine are close, both ahead of Euclidean.
+- **Query time is extraction time**: exact search over 7,627 images takes under 1 ms with cosine or Euclidean
+  distance and 3–16 ms with Manhattan distance, depending on vector size.
 
 For detailed analysis and visualization of results, see the [evaluation report](reports/1.0-evaluation.pdf).
 

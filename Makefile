@@ -1,40 +1,46 @@
 export PYTHONPATH=$(shell pwd)
 
-VIRTUAL_ENV=.venv
-PYTHON=${VIRTUAL_ENV}/bin/python
-JUPYTER=${VIRTUAL_ENV}/bin/jupyter-lab
+RUN=uv run --frozen
 
-.PHONY: prepare download build features predict venv venv-dev
+.PHONY: prepare download build features predict notebook venv lint test
 
 venv:
-	uv venv $(VIRTUAL_ENV) --python 3.12
-	uv pip install -e .
+	uv sync --frozen --all-groups
 
-venv-dev: venv
-	uv pip install -e ".[dev]"
-
+# Never overwrite an existing .env: it holds the Kaggle credentials.
 prepare:
 	@mkdir -p data/raw data/inputs data/features data/evaluation
-	@printf '%s\n' \
-		"RAW_PATH=$(shell pwd)/data/raw" \
-		"INPUT_PATH=$(shell pwd)/data/inputs" \
-		"FEATURE_PATH=$(shell pwd)/data/features" \
-		"EVALUATION_PATH=$(shell pwd)/data/evaluation" \
-		"KAGGLE_USERNAME=" \
-		"KAGGLE_KEY=" > .env
-	@echo "Created .env file. Add your Kaggle credentials (https://www.kaggle.com/settings > API)"
+	@if [ -f .env ]; then \
+		echo ".env already exists, left unchanged."; \
+	else \
+		printf '%s\n' \
+			"RAW_PATH=$(shell pwd)/data/raw" \
+			"INPUT_PATH=$(shell pwd)/data/inputs" \
+			"FEATURE_PATH=$(shell pwd)/data/features" \
+			"EVALUATION_PATH=$(shell pwd)/data/evaluation" \
+			"KAGGLE_USERNAME=" \
+			"KAGGLE_KEY=" > .env; \
+		echo "Created .env file. Add your Kaggle credentials (https://www.kaggle.com/settings > API)"; \
+	fi
 
 download:
-	$(PYTHON) src/dataset/download_dataset.py
+	$(RUN) src/dataset/download_dataset.py
 
 build:
-	$(PYTHON) src/dataset/build_dataset.py
+	$(RUN) src/dataset/build_dataset.py
 
 features:
-	$(PYTHON) src/features/build_features.py
+	$(RUN) src/features/build_features.py
 
 predict:
-	$(PYTHON) src/models/make_prediction.py
+	$(RUN) src/models/make_prediction.py
 
 notebook:
-	cd notebooks/ & $(JUPYTER) --port=8080
+	cd notebooks && $(RUN) jupyter-lab --port=8080
+
+lint:
+	$(RUN) ruff check .
+	$(RUN) ruff format --check .
+
+test:
+	$(RUN) python -m unittest discover tests

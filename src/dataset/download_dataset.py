@@ -9,7 +9,8 @@ from os.path import exists, isdir, join
 import kagglehub
 from rich.console import Console
 
-DATASET_ID = "trolukovich/apparel-images-dataset"
+# ##: Pinned version: results are only comparable on the same images.
+DATASET_ID = "trolukovich/apparel-images-dataset/versions/6"
 
 
 def download_dataset(output_path: str) -> str:
@@ -44,15 +45,9 @@ def download_dataset(output_path: str) -> str:
 
     # ##: Check if target directory already contains dataset subdirectories.
     expected_subdirs = ["red_dress", "blue_shirt", "black_pants"]
-    if exists(output_path) and any(
-        isdir(join(output_path, d)) for d in expected_subdirs
-    ):
-        console.print(
-            f"[yellow]Target directory already contains data:[/yellow] {output_path}"
-        )
-        console.print(
-            "[yellow]Skipping copy. Delete existing data to re-download.[/yellow]"
-        )
+    if exists(output_path) and any(isdir(join(output_path, d)) for d in expected_subdirs):
+        console.print(f"[yellow]Target directory already contains data:[/yellow] {output_path}")
+        console.print("[yellow]Skipping copy. Delete existing data to re-download.[/yellow]")
         return output_path
 
     console.print(f"[bold blue]Copying to:[/bold blue] {output_path}")

@@ -1,155 +1,85 @@
 # -*- coding: utf-8 -*-
 """
-Ensemble de classe pour l'utilisation de réseaux de neurones pre-entraînés.
+Réseaux de neurones pré-entraînés (timm) utilisés comme extracteurs.
 """
-from typing import Any, Callable, Optional
 
-import tensorflow as tf
+from typing import List, Sequence
+
+import timm
+import torch
 from numpy import ndarray
+from PIL import Image
+
+DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
 
 class Compressor:
     """
-    Interface pour l'utilisation d'un réseau de neurones.
+    Vecteur global d'image d'un réseau pré-entraîné : sortie de `timm` sans tête de classification.
 
-    Attributes
+    Each checkpoint uses its own prescribed preprocessing (size, crop, normalisation) from its timm configuration.
+    `extract` works on any number of images: the gallery is processed in batches, a query is a batch of one.
+
+    Parameters
     ----------
-    extractor : Any
-        Object permettant l'extraction des données.
-    preprocessor : Callable, default: None
-        Fonction de pré-traîtement.
-
-    Methods
-    -------
-    preprocess(image_path: str)
-        Chargement de l'image et ensemble de pré-traitement pour l'extraction des données caractéristiques.
-    extract(image_path: str)
-        Utilisation d'un réseau de neurones afin d'extraire les données caractéristiques d'une image.
+    name : str
+        Nom du modèle pré-entraîné dans `timm`.
+    batch_size : int, default: 4
+        Nombre d'images par passe; small batches avoid memory pressure on Apple GPUs with the largest networks.
     """
 
-    extractor: Any
-    preprocessor: Optional[Callable]
+    def __init__(self, name: str, batch_size: int = 4):
+        self.model = timm.create_model(name, pretrained=True, num_classes=0).eval().to(DEVICE)
+        self.transform = timm.data.create_transform(**timm.data.resolve_data_config({}, model=self.model))
+        self.batch_size = batch_size
 
-    def __init__(self, height: int = 224, width: int = 224):
-        self.height, self.width = height, width
+    def fit(self, image_paths: Sequence[str]):
+        """Rien à apprendre : les poids sont figés."""
 
-    def preprocess(self, image_path: str) -> tf.Tensor:
+    def load(self, image_path: str) -> torch.Tensor:
         """
-        Chargement de l'image et ensemble de pré-traitement pour l'extraction des données caractéristiques.
-
-        Parameters
-        ----------
-        image_path : str
-            Chemin de l'image.
-
-        Returns
-        -------
-        tf.Tensor
-            L'image prête pour l'extraction des données caractéristiques.
+        Lecture en RGB (y compris les images en niveaux de gris) et pré-traitement du modèle.
         """
-        # ##: Load image.
-        image = tf.image.decode_jpeg(tf.io.read_file(image_path))
-        if len(tf.shape(image)) < 3:
-            image = tf.expand_dims(image, axis=-1)
+        with Image.open(image_path) as image:
+            return self.transform(image.convert("RGB"))
 
-        # ##: Preprocessing.
-        image = tf.image.resize(image, [self.height, self.width])
-        image = self.preprocessor(image) if self.preprocessor is not None else image
-
-        return tf.expand_dims(image, axis=0)
-
-    def extract(self, image_path: str) -> ndarray:
+    @torch.inference_mode()
+    def extract(self, image_paths: Sequence[str]) -> List[ndarray]:
         """
-        Utilisation d'un réseau de neurones afin d'extraire les données caractéristiques d'une image.
-
-        Parameters
-        ----------
-        image_path : str
-            Chemin de l'image.
-
-        Returns
-        -------
-        ndarray
-            Données caractéristiques de l'image.
+        Vecteur caractéristique de chaque image.
         """
-        return self.extractor.predict(self.preprocess(image_path=image_path))[0].flatten()
+        features: List[ndarray] = []
+        for start in range(0, len(image_paths), self.batch_size):
+            batch = torch.stack([self.load(path) for path in image_paths[start : start + self.batch_size]])
+            features.extend(self.model(batch.to(DEVICE)).float().cpu().numpy())
+        return features
 
 
-class VGGCompressor(Compressor):
-    """
-    Interface pour l'utilisation d'un réseau de neurones.
-
-    Attributes
-    ----------
-    extractor : Any
-        Object permettant l'extraction des données.
-    preprocessor : Callable, default: None
-        Fonction de pré-traîtement.
-
-    Methods
-    -------
-    preprocess(image_path: str)
-        Chargement de l'image et ensemble de pré-traitement pour l'extraction des données caractéristiques.
-    extract(image_path: str)
-        Utilisation d'un réseau de neurones afin d'extraire les données caractéristiques d'une image.
-    """
-
-    def __init__(self, height: int = 224, width: int = 224):
-        super().__init__(height=height, width=width)
-        self.preprocessor = tf.keras.applications.vgg16.preprocess_input
-        model = tf.keras.applications.VGG16(weights="imagenet", include_top=True, input_shape=(height, width, 3))
-        self.extractor = tf.keras.models.Model(inputs=model.input, outputs=model.layers[-2].output)
+def vgg16() -> Compressor:
+    """VGG16, couche dense `fc7` avant la classification (4096), comme l'étude d'origine."""
+    return Compressor("vgg16.tv_in1k")
 
 
-class NasNetCompressor(Compressor):
-    """
-    Interface pour l'utilisation d'un réseau de neurones.
-
-    Attributes
-    ----------
-    extractor : Any
-        Object permettant l'extraction des données.
-    preprocessor : Callable, default: None
-        Fonction de pré-traîtement.
-
-    Methods
-    -------
-    preprocess(image_path: str)
-        Chargement de l'image et ensemble de pré-traitement pour l'extraction des données caractéristiques.
-    extract(image_path: str)
-        Utilisation d'un réseau de neurones afin d'extraire les données caractéristiques d'une image.
-    """
-
-    def __init__(self, height: int = 331, width: int = 331):
-        super().__init__(height=height, width=width)
-        self.preprocessor = tf.keras.applications.nasnet.preprocess_input
-        model = tf.keras.applications.NASNetLarge(weights="imagenet", include_top=True, input_shape=(height, width, 3))
-        self.extractor = tf.keras.models.Model(inputs=model.input, outputs=model.layers[-2].output)
+def nasnet() -> Compressor:
+    """NASNetLarge, moyenne globale (4032)."""
+    return Compressor("nasnetalarge.tf_in1k")
 
 
-class EfficientNetCompressor(Compressor):
-    """
-    Interface pour l'utilisation d'un réseau de neurones.
+def efficientnet() -> Compressor:
+    """EfficientNet-B7, moyenne globale (2560), poids ImageNet AutoAugment, ceux de Keras."""
+    return Compressor("tf_efficientnet_b7.aa_in1k")
 
-    Attributes
-    ----------
-    extractor : Any
-        Object permettant l'extraction des données.
-    preprocessor : Callable, default: None
-        Fonction de pré-traîtement.
 
-    Methods
-    -------
-    preprocess(image_path: str)
-        Chargement de l'image et ensemble de pré-traitement pour l'extraction des données caractéristiques.
-    extract(image_path: str)
-        Utilisation d'un réseau de neurones afin d'extraire les données caractéristiques d'une image.
-    """
+def convnext() -> Compressor:
+    """ConvNeXt-Tiny, CNN moderne de taille modeste, moyenne globale (768)."""
+    return Compressor("convnext_tiny.fb_in1k")
 
-    def __init__(self, height: int = 600, width: int = 600):
-        super().__init__(height=height, width=width)
-        self.preprocessor = tf.keras.applications.efficientnet.preprocess_input
-        model = tf.keras.applications.EfficientNetB7(
-            weights="imagenet", include_top=True, input_shape=(height, width, 3)
-        )
-        self.extractor = tf.keras.models.Model(inputs=model.input, outputs=model.layers[-2].output)
+
+def dinov2() -> Compressor:
+    """DINOv2 ViT-B/14, auto-supervisé, jeton de classe (768)."""
+    return Compressor("vit_base_patch14_dinov2.lvd142m")
+
+
+def siglip2() -> Compressor:
+    """SigLIP 2 ViT-B/16, pré-entraîné sur des paires image-texte, encodeur d'image (768)."""
+    return Compressor("vit_base_patch16_siglip_224.v2_webli")

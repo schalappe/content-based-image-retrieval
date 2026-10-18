@@ -7,7 +7,7 @@ from typing import Callable, Dict, List, Optional, Protocol, Sequence
 
 from numpy import ndarray
 
-from src.addons.extraction.compressor import efficientnet, nasnet, vgg16
+from src.addons.extraction.compressor import convnext, dinov2, efficientnet, nasnet, siglip2, vgg16
 from src.addons.extraction.descriptor import akaze, orb
 
 
@@ -30,4 +30,7 @@ extractors: Dict[str, Callable[[], Extractor]] = {
     "VGG": vgg16,
     "NasNet": nasnet,
     "EfficientNet": efficientnet,
+    "ConvNeXt": convnext,
+    "DINOv2": dinov2,
+    "SigLIP2": siglip2,
 }

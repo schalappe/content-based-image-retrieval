@@ -1,84 +1,85 @@
 # -*- coding: utf-8 -*-
 """
-Réseaux de neurones pré-entraînés sur ImageNet utilisés comme extracteurs.
+Réseaux de neurones pré-entraînés (timm) utilisés comme extracteurs.
 """
 
-from typing import Callable, List, Sequence
+from typing import List, Sequence
 
-import tensorflow as tf
+import timm
+import torch
 from numpy import ndarray
+from PIL import Image
+
+DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
 
 class Compressor:
     """
-    Vecteur de la couche choisie d'un réseau pré-entraîné.
+    Vecteur global d'image d'un réseau pré-entraîné : sortie de `timm` sans tête de classification.
 
+    Each checkpoint uses its own prescribed preprocessing (size, crop, normalisation) from its timm configuration.
     `extract` works on any number of images: the gallery is processed in batches, a query is a batch of one.
 
     Parameters
     ----------
-    model : tf.keras.Model
-        Réseau dont la sortie est le vecteur caractéristique.
-    size : int
-        Côté de l'image attendu par le réseau.
-    preprocess : Callable
-        Pré-traitement propre au réseau, appliqué à une image RGB en [0, 255].
+    name : str
+        Nom du modèle pré-entraîné dans `timm`.
     batch_size : int, default: 4
-        Nombre d'images par passe. Measured on an M1 Pro (Metal) with EfficientNetB7 at 600 px: 4 images is ~2x
-        faster per image than 1, while 16 is ~7x slower (memory pressure).
+        Nombre d'images par passe; small batches avoid memory pressure on Apple GPUs with the largest networks.
     """
 
-    def __init__(
-        self,
-        model: tf.keras.Model,
-        size: int,
-        preprocess: Callable,
-        batch_size: int = 4,
-    ):
-        self.model, self.size, self.preprocess, self.batch_size = (
-            model,
-            size,
-            preprocess,
-            batch_size,
-        )
+    def __init__(self, name: str, batch_size: int = 4):
+        self.model = timm.create_model(name, pretrained=True, num_classes=0).eval().to(DEVICE)
+        self.transform = timm.data.create_transform(**timm.data.resolve_data_config({}, model=self.model))
+        self.batch_size = batch_size
 
     def fit(self, image_paths: Sequence[str]):
         """Rien à apprendre : les poids sont figés."""
 
-    def load(self, image_path: tf.Tensor) -> tf.Tensor:
+    def load(self, image_path: str) -> torch.Tensor:
         """
-        Lecture en RGB (y compris les images en niveaux de gris), redimensionnement et pré-traitement.
+        Lecture en RGB (y compris les images en niveaux de gris) et pré-traitement du modèle.
         """
-        image = tf.io.decode_image(tf.io.read_file(image_path), channels=3, expand_animations=False)
-        image = tf.image.resize(image, [self.size, self.size])
-        return self.preprocess(image)
+        with Image.open(image_path) as image:
+            return self.transform(image.convert("RGB"))
 
+    @torch.inference_mode()
     def extract(self, image_paths: Sequence[str]) -> List[ndarray]:
         """
         Vecteur caractéristique de chaque image.
         """
-        images = tf.data.Dataset.from_tensor_slices(list(image_paths)).map(self.load).batch(self.batch_size)
-        return [vector for batch in images for vector in self.model(batch, training=False).numpy()]
+        features: List[ndarray] = []
+        for start in range(0, len(image_paths), self.batch_size):
+            batch = torch.stack([self.load(path) for path in image_paths[start : start + self.batch_size]])
+            features.extend(self.model(batch.to(DEVICE)).float().cpu().numpy())
+        return features
 
 
 def vgg16() -> Compressor:
-    """VGG16, couche dense `fc2` (4096), celle de l'étude d'origine."""
-    base = tf.keras.applications.VGG16(weights="imagenet", include_top=True)
-    model = tf.keras.Model(inputs=base.input, outputs=base.get_layer("fc2").output)
-    return Compressor(model, 224, tf.keras.applications.vgg16.preprocess_input)
+    """VGG16, couche dense `fc7` avant la classification (4096), comme l'étude d'origine."""
+    return Compressor("vgg16.tv_in1k")
 
 
 def nasnet() -> Compressor:
-    """NASNetLarge, moyenne globale de la dernière carte de caractéristiques (4032)."""
-    model = tf.keras.applications.NASNetLarge(
-        weights="imagenet", include_top=False, pooling="avg", input_shape=(331, 331, 3)
-    )
-    return Compressor(model, 331, tf.keras.applications.nasnet.preprocess_input)
+    """NASNetLarge, moyenne globale (4032)."""
+    return Compressor("nasnetalarge.tf_in1k")
 
 
 def efficientnet() -> Compressor:
-    """EfficientNetB7, moyenne globale de la dernière carte de caractéristiques (2560); normalisation intégrée."""
-    model = tf.keras.applications.EfficientNetB7(
-        weights="imagenet", include_top=False, pooling="avg", input_shape=(600, 600, 3)
-    )
-    return Compressor(model, 600, tf.keras.applications.efficientnet.preprocess_input)
+    """EfficientNet-B7, moyenne globale (2560), poids ImageNet AutoAugment, ceux de Keras."""
+    return Compressor("tf_efficientnet_b7.aa_in1k")
+
+
+def convnext() -> Compressor:
+    """ConvNeXt-Tiny, CNN moderne de taille modeste, moyenne globale (768)."""
+    return Compressor("convnext_tiny.fb_in1k")
+
+
+def dinov2() -> Compressor:
+    """DINOv2 ViT-B/14, auto-supervisé, jeton de classe (768)."""
+    return Compressor("vit_base_patch14_dinov2.lvd142m")
+
+
+def siglip2() -> Compressor:
+    """SigLIP 2 ViT-B/16, pré-entraîné sur des paires image-texte, encodeur d'image (768)."""
+    return Compressor("vit_base_patch16_siglip_224.v2_webli")

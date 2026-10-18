@@ -22,7 +22,7 @@ def gallery_features(extractor: Extractor, paths: Sequence[str], progress: Progr
     """
     task = progress.add_task("  base", total=len(paths))
     features: List[Optional[ndarray]] = []
-    for chunk in batched(paths, 256):
+    for chunk in batched(paths, 256, strict=False):
         features.extend(extractor.extract(chunk))
         progress.advance(task, len(chunk))
     return features

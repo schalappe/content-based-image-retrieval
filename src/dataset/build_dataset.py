@@ -36,10 +36,10 @@ def create_dataset(input_path: str, output_path: str):
         shuffle=True,
         stratify=labels,
     )
-    set_info = zip(("train", "test"), ([train_set, train_label], [test_set, test_label]))
+    set_info = zip(("train", "test"), ([train_set, train_label], [test_set, test_label]), strict=True)
 
     for name, (path, label) in track(set_info, description="Save data ..."):
-        color, style = zip(*(item.split("_") for item in label))
+        color, style = zip(*(item.split("_") for item in label), strict=True)
         data = DataFrame({"path": path, "label": label, "color": color, "style": style})
         data.write_parquet(join(output_path, f"{name}.parquet"))
 

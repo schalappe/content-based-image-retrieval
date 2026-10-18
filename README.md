@@ -32,29 +32,42 @@ This project compares different combinations of feature extraction algorithms an
 the most effective approach for image retrieval tasks.
 
 #### Feature Extraction Methods
-* Traditional Computer Vision:
-  * [AKAZE](https://docs.opencv.org/3.4/db/d70/tutorial_akaze_matching.html) - Fast local feature detector and descriptor
-  * [ORB](https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_orb/py_orb.html) - Oriented FAST and Rotated BRIEF features
+* Traditional Computer Vision, as a [bag of visual words](https://en.wikipedia.org/wiki/Bag-of-words_model_in_computer_vision)
+  (512-word vocabulary learned on the gallery split, Hamming assignment of the binary descriptors):
+  * [AKAZE](https://docs.opencv.org/4.x/db/d70/tutorial_akaze_matching.html) - Fast local feature detector and descriptor
+  * [ORB](https://docs.opencv.org/4.x/d1/d89/tutorial_py_orb.html) - Oriented FAST and Rotated BRIEF features
 * Deep Learning:
-  * [VGG16](https://neurohive.io/en/popular-networks/vgg16/) - 16-layer CNN architecture
-  * [NasNet](https://paperswithcode.com/model/nasnet?variant=nasnetalarge) - Neural Architecture Search Network
-  * [EfficientNet](https://paperswithcode.com/method/efficientnet) - Scalable and efficient CNN
+  * [VGG16](https://neurohive.io/en/popular-networks/vgg16/) - 16-layer CNN, `fc2` layer (4096)
+  * [NasNet](https://paperswithcode.com/model/nasnet?variant=nasnetalarge) - NASNetLarge, global average pooling (4032)
+  * [EfficientNet](https://paperswithcode.com/method/efficientnet) - EfficientNetB7, global average pooling (2560)
 
-#### Similarity Metrics
-* [Cosine Similarity](https://en.wikipedia.org/wiki/Cosine_similarity) - Measure of similarity between two non-zero vectors
+#### Similarity Measures
+
+Search is exact (brute force), so differences come from the features and the measure, not from an approximate index.
+
+* [Cosine Distance](https://en.wikipedia.org/wiki/Cosine_similarity) - 1 minus the cosine similarity; compares directions only
 * [Manhattan Distance](https://en.wikipedia.org/wiki/Manhattan_distance) - Sum of absolute differences between coordinates
 * [Euclidean Distance](https://en.wikipedia.org/wiki/Euclidean_space) - "Ordinary" straight-line distance between points
 
 ### Evaluation Dataset
 
-We used the [Apparel Images Dataset](https://www.kaggle.com/trolukovich/apparel-images-dataset) from Kaggle, which
-contains various clothing items organized by category.
+We used version 6 of the [Apparel Images Dataset](https://www.kaggle.com/trolukovich/apparel-images-dataset) from
+Kaggle: 11,385 images in 24 `<color>_<style>` categories. A seeded, stratified split keeps 67% of the images as the
+searchable gallery and 33% as queries.
 
 ### Evaluation Metrics
-* [Mean Average Precision (MAP)](https://en.wikipedia.org/wiki/Evaluation_measures_(information_retrieval)#Mean_average_precision) - Assesses overall system retrieval quality
-* [Mean Reciprocal Rank (MRR)](https://en.wikipedia.org/wiki/Mean_reciprocal_rank) - Evaluates the rank of the first relevant item
-* First Rank Accuracy - Percentage of queries where the first result is relevant
-* Average query time - Performance measurement in seconds
+
+Each query returns its 5 nearest gallery images. An image is relevant when it shares the query's label (color and
+style), or only its color, or only its style: the notebook reports all three.
+
+* [MAP@5](https://en.wikipedia.org/wiki/Evaluation_measures_(information_retrieval)#Mean_average_precision) - Average
+  precision over the 5 results, divided by `min(relevant images in the gallery, 5)`
+* [MRR@5](https://en.wikipedia.org/wiki/Mean_reciprocal_rank) - Reciprocal rank of the first relevant result, 0 beyond rank 5
+* First Rank Accuracy - Share of queries whose first result is relevant
+* Query time - Mean single-image extraction time plus mean search time per query, in milliseconds
+
+A query or gallery image from which a method extracts nothing (no keypoint) stays in the evaluation and counts
+against that method.
 
 ## Project Structure
 
@@ -70,7 +83,7 @@ contains various clothing items organized by category.
 │   ├── addons/         # Core functionality
 │   │   ├── extraction/ # Feature extraction algorithms
 │   │   └── metrics.py  # Evaluation metrics
-│   ├── data/           # Data processing utilities
+│   ├── dataset/        # Download and train/test split
 │   ├── features/       # Feature generation scripts
 │   └── models/         # Prediction and model utilities
 ├── tests/              # Unit tests
@@ -115,7 +128,12 @@ contains various clothing items organized by category.
    make download
    ```
 
-6. Generate feature vectors:
+6. Split it into gallery (`train`) and queries (`test`):
+   ```bash
+   make build
+   ```
+
+7. Extract the feature vectors of every image, for every method:
    ```bash
    make features
    ```
@@ -124,7 +142,7 @@ contains various clothing items organized by category.
 
 ### Running Evaluations
 
-To run the complete evaluation pipeline:
+To search the 5 nearest images of every query, for every method and measure (needs `make features`):
 ```bash
 make predict
 ```
@@ -139,30 +157,34 @@ make notebook
 ### Running Tests
 
 ```bash
-python -m unittest discover tests
+.venv/bin/python -m unittest discover tests
 ```
 
 ## Results and Findings
 
-Our evaluation revealed significant differences in performance between traditional computer vision and deep learning approaches:
+Results for relevance on the full label (color and style), best measure per method, from the
+[evaluation notebook](notebooks/1.0-evaluation.ipynb). Color-only and style-only tables are in the notebook.
+Measured on an Apple M1 Pro (TensorFlow Metal); query time depends on the hardware.
 
 ### Performance Comparison
 
-| Method       | Similarity | MAP  | MRR  | First Rank Accuracy | Avg Query Time (s)  |
-|--------------|------------|------|------|---------------------|---------------------|
-| EfficientNet | Euclidean  | 0.75 | 0.78 | 0.70                | 0.008               |
-| VGG16        | Manhattan  | 0.72 | 0.76 | 0.68                | 0.009               |
-| NasNet       | Euclidean  | 0.65 | 0.70 | 0.64                | 0.012               |
-| AKAZE        | Manhattan  | 0.41 | 0.47 | 0.39                | 0.005               |
-| ORB          | Euclidean  | 0.35 | 0.40 | 0.33                | 0.004               |
+| Method       | Measure   | MAP@5 | MRR@5 | First Rank Accuracy | Query Time (ms) |
+|--------------|-----------|-------|-------|---------------------|-----------------|
+| VGG16        | Cosine    | 0.568 | 0.790 | 0.695               | 53              |
+| EfficientNet | Cosine    | 0.548 | 0.777 | 0.690               | 867             |
+| NasNet       | Cosine    | 0.507 | 0.749 | 0.652               | 562             |
+| AKAZE        | Manhattan | 0.174 | 0.385 | 0.282               | 22              |
+| ORB          | Manhattan | 0.149 | 0.364 | 0.259               | 7               |
 
 ### Key Findings
 
-- **Neural networks significantly outperform traditional descriptors** in retrieval accuracy
-- **Euclidean and Manhattan distances** consistently work better than cosine similarity
-- **EfficientNet with Euclidean distance** provides the best balance of accuracy and performance
-- Traditional methods (AKAZE, ORB) are faster but substantially less accurate
-- Cosine similarity performs poorly across all extraction methods
+- **Neural networks clearly outperform local descriptors**: MAP@5 of 0.50–0.57 versus 0.11–0.17 for AKAZE and ORB.
+- **On the full label, cosine distance is the best measure for every network**, by less than 0.03 MAP@5; for AKAZE and ORB, Manhattan and
+  cosine are close and both ahead of Euclidean.
+- **VGG16 with cosine distance gives the best accuracy and is the fastest network** (~53 ms per query).
+- **Style is almost solved by every network** (MAP@5 above 0.92, best EfficientNet at 0.968); color causes most errors.
+- **Query time is extraction time**: exact search over 7,627 images takes under 1 ms with cosine or Euclidean
+  distance and 11–18 ms with Manhattan distance for the networks.
 
 For detailed analysis and visualization of results, see the [evaluation report](reports/1.0-evaluation.pdf).
 

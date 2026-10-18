@@ -36,10 +36,14 @@ the most effective approach for image retrieval tasks.
   (512-word vocabulary learned on the gallery split, Hamming assignment of the binary descriptors):
   * [AKAZE](https://docs.opencv.org/4.x/db/d70/tutorial_akaze_matching.html) - Fast local feature detector and descriptor
   * [ORB](https://docs.opencv.org/4.x/d1/d89/tutorial_py_orb.html) - Oriented FAST and Rotated BRIEF features
-* Deep Learning:
-  * [VGG16](https://neurohive.io/en/popular-networks/vgg16/) - 16-layer CNN, `fc2` layer (4096)
+* Deep Learning, pretrained networks loaded with [timm](https://github.com/huggingface/pytorch-image-models), each
+  with its prescribed preprocessing:
+  * [VGG16](https://neurohive.io/en/popular-networks/vgg16/) - 16-layer CNN, last dense layer before classification (4096)
   * [NasNet](https://paperswithcode.com/model/nasnet?variant=nasnetalarge) - NASNetLarge, global average pooling (4032)
-  * [EfficientNet](https://paperswithcode.com/method/efficientnet) - EfficientNetB7, global average pooling (2560)
+  * [EfficientNet](https://paperswithcode.com/method/efficientnet) - EfficientNet-B7, global average pooling (2560)
+  * [ConvNeXt](https://arxiv.org/abs/2201.03545) - ConvNeXt-Tiny, a modern CNN of modest size (768)
+  * [DINOv2](https://github.com/facebookresearch/dinov2) - ViT-B/14, self-supervised (768)
+  * [SigLIP 2](https://arxiv.org/abs/2502.14786) - ViT-B/16, image-text pretraining, image encoder (768)
 
 #### Similarity Measures
 
@@ -95,7 +99,7 @@ against that method.
 ## Installation
 
 ### Prerequisites
-- Python 3.12+
+- Python 3.14 (installed by uv if missing)
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) for dependency management
 - [Kaggle account](https://www.kaggle.com/) with API credentials (get from [Kaggle Settings > API](https://www.kaggle.com/settings))
 
@@ -157,34 +161,45 @@ make notebook
 ### Running Tests
 
 ```bash
-.venv/bin/python -m unittest discover tests
+make test
+```
+
+### Linting and Formatting
+
+```bash
+make lint
 ```
 
 ## Results and Findings
 
 Results for relevance on the full label (color and style), best measure per method, from the
 [evaluation notebook](notebooks/1.0-evaluation.ipynb). Color-only and style-only tables are in the notebook.
-Measured on an Apple M1 Pro (TensorFlow Metal); query time depends on the hardware.
+Measured on an Apple M1 Pro (PyTorch, MPS); query time depends on the hardware.
 
 ### Performance Comparison
 
 | Method       | Measure   | MAP@5 | MRR@5 | First Rank Accuracy | Query Time (ms) |
 |--------------|-----------|-------|-------|---------------------|-----------------|
-| VGG16        | Cosine    | 0.568 | 0.790 | 0.695               | 53              |
-| EfficientNet | Cosine    | 0.548 | 0.777 | 0.690               | 867             |
-| NasNet       | Cosine    | 0.507 | 0.749 | 0.652               | 562             |
-| AKAZE        | Manhattan | 0.174 | 0.385 | 0.282               | 22              |
+| SigLIP 2     | Cosine    | 0.671 | 0.870 | 0.803               | 25              |
+| ConvNeXt     | Cosine    | 0.618 | 0.826 | 0.751               | 16              |
+| VGG16        | Cosine    | 0.607 | 0.816 | 0.738               | 53              |
+| EfficientNet | Cosine    | 0.549 | 0.778 | 0.690               | 207             |
+| NasNet       | Manhattan | 0.512 | 0.741 | 0.649               | 149             |
+| DINOv2       | Manhattan | 0.448 | 0.727 | 0.613               | 133             |
+| AKAZE        | Manhattan | 0.174 | 0.385 | 0.282               | 24              |
 | ORB          | Manhattan | 0.149 | 0.364 | 0.259               | 7               |
 
 ### Key Findings
 
-- **Neural networks clearly outperform local descriptors**: MAP@5 of 0.50–0.57 versus 0.11–0.17 for AKAZE and ORB.
-- **On the full label, cosine distance is the best measure for every network**, by less than 0.03 MAP@5; for AKAZE and ORB, Manhattan and
-  cosine are close and both ahead of Euclidean.
-- **VGG16 with cosine distance gives the best accuracy and is the fastest network** (~53 ms per query).
-- **Style is almost solved by every network** (MAP@5 above 0.92, best EfficientNet at 0.968); color causes most errors.
+- **Neural networks clearly outperform local descriptors**: MAP@5 of 0.45–0.67 versus 0.11–0.17 for AKAZE and ORB.
+- **SigLIP 2 (image-text pretraining) is the most accurate** on the full label (0.671) and on color alone (0.689),
+  at ~25 ms per query; **ConvNeXt-Tiny is second and the fastest network** (~16 ms).
+- **The large networks of the original study** (EfficientNet-B7, NASNetLarge) are less accurate and 5–13× slower.
+- **DINOv2 is best on style alone (0.971) but weakest on color (0.458)**: its features describe shape, not color.
+- **The measure matters little for networks**: cosine is best or within 0.005 of the best for each, except that
+  Manhattan drops with SigLIP 2 (0.633). For AKAZE and ORB, Manhattan and cosine are close, both ahead of Euclidean.
 - **Query time is extraction time**: exact search over 7,627 images takes under 1 ms with cosine or Euclidean
-  distance and 11–18 ms with Manhattan distance for the networks.
+  distance and 3–16 ms with Manhattan distance, depending on vector size.
 
 For detailed analysis and visualization of results, see the [evaluation report](reports/1.0-evaluation.pdf).
 

@@ -1,152 +1,103 @@
 # -*- coding: utf-8 -*-
 """
-Ensemble de classe pour l'utilisation des descripteurs du module `OpenCV`.
+Sac de mots visuels construit sur des descripteurs locaux binaires d'`OpenCV` (ORB, AKAZE).
 """
-from typing import Any, Optional
+
+from typing import Any, List, Optional, Sequence
 
 import cv2 as cv
-from numpy import array, concatenate, ndarray, zeros
+import numpy as np
+from numpy import ndarray
+from sklearn.cluster import MiniBatchKMeans
 
 
-class Descriptor:
+class BagOfWords:
     """
-    Interface pour l'utilisation des descripteurs du module `OpenCV`.
+    Histogramme de mots visuels d'une image, de taille fixe `words`.
 
-    Attributes
-    ----------
-    extractor : Any
-        Object permettant l'extraction des données.
-    vector_size : int
-        Taille du vecteur des données caractéristiques.
+    Local descriptors have no fixed count or order, so they cannot be compared position by position. Each descriptor
+    is assigned to its nearest visual word and the image becomes the normalised word histogram, which every
+    similarity measure can compare. Call `fit` on the train split only, then `extract`.
 
-    Methods
-    -------
-    preprocess(image_path: str)
-        Chargement de l'image et ensemble de pré-traitement pour l'extraction des données caractéristiques.
-    extract(image_path: str)
-        Utilisation d'un descripteur afin d'extraire les données caractéristiques d'une image.
+    The vocabulary is k-means on unpacked descriptor bits with centroids rounded back to bits, so assignment uses
+    the Hamming distance, the native distance of binary descriptors.
     """
 
-    extractor: Any
+    def __init__(
+        self,
+        detector: Any,
+        words: int = 512,
+        sample_images: int = 2000,
+        per_image: int = 100,
+        seed: int = 1331,
+    ):
+        self.detector = detector
+        self.words, self.sample_images, self.per_image, self.seed = (
+            words,
+            sample_images,
+            per_image,
+            seed,
+        )
+        self.matcher = cv.BFMatcher(cv.NORM_HAMMING)
+        self.vocabulary: Optional[ndarray] = None
 
-    def __init__(self, size: int = 32):
-        self.vector_size = size
-
-    def preprocess(self, image_path: str) -> ndarray:
+    def descriptors(self, image_path: str) -> Optional[ndarray]:
         """
-        Chargement de l'image et ensemble de pré-traitement pour l'extraction des données caractéristiques.
-
-        Parameters
-        ----------
-        image_path : str
-            Chemin de l'image.
-
-        Returns
-        -------
-        ndarray
-            L'image prête pour l'extraction des données caractéristiques.
+        Descripteurs binaires de l'image, `None` si aucun point clé n'est détecté.
         """
-        return cv.imread(image_path)
+        image = cv.imread(image_path, cv.IMREAD_GRAYSCALE)
+        if image is None:
+            raise ValueError(f"Image illisible : {image_path}")
+        _, descriptors = self.detector.detectAndCompute(image, None)
+        return descriptors
 
-    def extract(self, image_path: str) -> Optional[ndarray]:
+    def fit(self, image_paths: Sequence[str]):
         """
-        Utilisation d'un descripteur afin d'extraire les données caractéristiques d'une image.
-
-        Parameters
-        ----------
-        image_path : str
-            Chemin de l'image.
-
-        Returns
-        -------
-        ndarray
-            Données caractéristiques de l'image.
+        Apprentissage du vocabulaire sur un échantillon reproductible des images.
         """
-        # ##: Get image key points and keep the best.
-        image = self.preprocess(image_path=image_path)
-        kps = self.extractor.detect(image)
-        if not kps:
-            return None
-        kps = sorted(kps, key=lambda x: -x.response)[: self.vector_size]
+        rng = np.random.default_rng(self.seed)
+        sample = rng.choice(
+            len(image_paths),
+            size=min(self.sample_images, len(image_paths)),
+            replace=False,
+        )
+        collected = []
+        for index in sample:
+            descriptors = self.descriptors(image_paths[index])
+            if descriptors is not None:
+                keep = rng.choice(
+                    len(descriptors),
+                    size=min(self.per_image, len(descriptors)),
+                    replace=False,
+                )
+                collected.append(descriptors[keep])
+        bits = np.unpackbits(np.concatenate(collected), axis=1).astype(np.float32)
+        kmeans = MiniBatchKMeans(n_clusters=self.words, random_state=self.seed, n_init=3).fit(bits)
+        self.vocabulary = np.packbits(kmeans.cluster_centers_ > 0.5, axis=1)
 
-        # ##: Computing descriptors vector
-        kps, dsc = self.extractor.compute(image, kps)
-        dsc = dsc.flatten()
-
-        # ##: Vector size adjustment.
-        needed_size = self.vector_size * 64
-        if dsc.size < needed_size:
-            dsc = concatenate([dsc, zeros(needed_size - dsc.size)])
-        return array(dsc)
-
-
-class AKAZEDescriptor(Descriptor):
-    """
-    Interface pour l'utilisation du descripteur **AKAZE** du module `OpenCV`.
-
-    Attributes
-    ----------
-    extractor : Any
-        Object permettant l'extraction des données.
-    vector_size : int
-        Taille du vecteur des données caractéristiques.
-
-    Methods
-    -------
-    preprocess(image_path: str)
-        Chargement de l'image et ensemble de pré-traitement pour l'extraction des données caractéristiques.
-    extract(image_path: str)
-        Utilisation d'un descripteur afin d'extraire les données caractéristiques d'une image.
-    """
-
-    def __init__(self, size: int = 32):
-        super().__init__(size=size)
-        self.extractor = cv.AKAZE_create()
+    def extract(self, image_paths: Sequence[str]) -> List[Optional[ndarray]]:
+        """
+        Histogramme normalisé de chaque image, `None` pour une image sans point clé.
+        """
+        if self.vocabulary is None:
+            raise RuntimeError("Appeler `fit` avant `extract`.")
+        features: List[Optional[ndarray]] = []
+        for image_path in image_paths:
+            descriptors = self.descriptors(image_path)
+            if descriptors is None:
+                features.append(None)
+                continue
+            words = [match.trainIdx for match in self.matcher.match(descriptors, self.vocabulary)]
+            histogram = np.bincount(words, minlength=self.words).astype(np.float32)
+            features.append(histogram / histogram.sum())
+        return features
 
 
-class ORBDescriptor(Descriptor):
-    """
-    Interface pour l'utilisation du descripteur **ORB** du module `OpenCV`.
-
-    Attributes
-    ----------
-    extractor : Any
-        Object permettant l'extraction des données.
-    vector_size : int
-        Taille du vecteur des données caractéristiques.
-
-    Methods
-    -------
-    preprocess(image_path: str)
-        Chargement de l'image et ensemble de pré-traitement pour l'extraction des données caractéristiques.
-    extract(image_path: str)
-        Utilisation d'un descripteur afin d'extraire les données caractéristiques d'une image.
-    """
-
-    def __init__(self, size: int = 32):
-        super().__init__(size=size)
-        self.extractor = cv.ORB_create()
+def akaze() -> BagOfWords:
+    """AKAZE avec son descripteur binaire MLDB par défaut."""
+    return BagOfWords(cv.xfeatures2d.AKAZE_create())
 
 
-class SIFTDescriptor(Descriptor):
-    """
-    Interface pour l'utilisation du descripteur **SURF** du module `OpenCV`.
-
-    Attributes
-    ----------
-    extractor : Any
-        Object permettant l'extraction des données.
-    vector_size : int
-        Taille du vecteur des données caractéristiques.
-
-    Methods
-    -------
-    preprocess(image_path: str)
-        Chargement de l'image et ensemble de pré-traitement pour l'extraction des données caractéristiques.
-    extract(image_path: str)
-        Utilisation d'un descripteur afin d'extraire les données caractéristiques d'une image.
-    """
-
-    def __init__(self, size: int = 32):
-        super().__init__(size=size)
-        self.extractor = cv.SIFT_create()
+def orb() -> BagOfWords:
+    """ORB, limité par défaut à 500 points clés par image."""
+    return BagOfWords(cv.ORB_create())

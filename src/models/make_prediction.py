@@ -1,61 +1,73 @@
 # -*- coding: utf-8 -*-
 """
-Script pour la recherche d'image par similarité.
+Script pour la recherche d'images par similarité sur les vecteurs pré-calculés.
 """
-from itertools import product
+
 from os.path import join
 
 import polars as pl
-from rich.progress import Progress
+from rich.progress import track
 
-from src.addons.data import load_database
 from src.addons.extraction.extractor import extractors
-from src.addons.finder import CosinusFinder, EuclideanFinder, Finder, ManhattanFinder
+from src.addons.finder import MEASURES, search
 
-finders = {"cosinus": CosinusFinder, "euclidean": EuclideanFinder, "manhattan": ManhattanFinder}
+DEPTH = 5
 
 
 def inference(input_path: str, feature_path: str, output_path: str):
     """
-    Élaboration et enregistrement de prédictions.
+    Recherche des `DEPTH` plus proches images de chaque requête, pour chaque méthode et chaque mesure.
+
+    Writes `<method>_<measure>_evaluation.parquet`, one row per query. A query without vector gets empty results and
+    a gallery image without vector cannot be returned: failures count against the method. `relevant_*` columns hold
+    the number of gallery images sharing the query's label, color or style, taken from the full train split so
+    every method is scored against the same denominator.
 
     Parameters
     ----------
     input_path : str
-        Répertoire contenant les données brutes.
+        Répertoire contenant `train.parquet`.
     feature_path : str
-        Répertoire contenant les données caractéristiques.
+        Répertoire contenant les vecteurs `<méthode>.parquet`.
     output_path : str
-        Répertoire où stocker les prédictions.
+        Répertoire où stocker les résultats.
     """
-    # ##: Get data.
-    data = pl.read_parquet(join(input_path, "test.parquet"))
+    train = pl.read_parquet(join(input_path, "train.parquet"))
+    relevant = [
+        pl.col(column)
+        .replace_strict(
+            train[column].value_counts()[column],
+            train[column].value_counts()["count"],
+            default=0,
+        )
+        .alias(f"relevant_{column}")
+        for column in ("label", "color", "style")
+    ]
 
-    # ##: Loop over finder and extractors.
-    with Progress() as progress:
-        combinations = list(product(extractors.items(), finders.items()))
+    combinations = [(method, measure) for method in extractors for measure in MEASURES]
+    for method, measure in track(combinations, description="Recherche ..."):
+        data = pl.read_parquet(join(feature_path, f"{method}.parquet"))
+        gallery = data.filter(pl.col("split") == "train", pl.col("feature").is_not_null())
+        queries = data.filter(pl.col("split") == "test").with_columns(relevant)
+        found, failed = (
+            queries.filter(pl.col("feature").is_not_null()),
+            queries.filter(pl.col("feature").is_null()),
+        )
 
-        tasks = progress.add_task("[green]Réalisation des prédictions ...", total=len(combinations))
-        for [(extract_method, extract_func), (finder_method, finder_func)] in combinations:
-            task = progress.add_task(f"[red]Prédiction avec {extract_method} et {finder_method}", total=data.shape[0])
-            finder: Finder = finder_func(
-                extract_func(), load_database(join(feature_path, f"{extract_method}_db.parquet"))
-            )
-
-            # ##: Make predictions.
-            prediction = []
-            for content in data.to_dicts():
-                color, style = content["label"].split("_")
-                res = {"ground_truth": content["label"], "gt_color": color, "gt_style": style}
-                res.update(finder.search(wanted=content["path"], depth=5))
-
-                prediction.append(res)
-                progress.advance(task)
-
-            # ##: Store.
-            prediction = pl.DataFrame(prediction)
-            prediction.write_parquet(join(output_path, f"{extract_method}_{finder_method}_evaluation.parquet"))
-            progress.advance(tasks)
+        indices, distances, seconds = search(
+            gallery["feature"].to_numpy(), found["feature"].to_numpy(), measure, DEPTH
+        )
+        results = found.with_columns(
+            returns=pl.Series(gallery["label"].to_numpy()[indices].tolist()),
+            colors=pl.Series(gallery["color"].to_numpy()[indices].tolist()),
+            styles=pl.Series(gallery["style"].to_numpy()[indices].tolist()),
+            distance=pl.Series(distances.tolist()),
+            search_seconds=pl.Series(seconds),
+        )
+        evaluation = pl.concat([results, failed], how="diagonal_relaxed").with_columns(
+            pl.col("returns", "colors", "styles").fill_null([]), depth=pl.lit(DEPTH)
+        )
+        evaluation.drop("feature", "split").write_parquet(join(output_path, f"{method}_{measure}_evaluation.parquet"))
 
 
 if __name__ == "__main__":
